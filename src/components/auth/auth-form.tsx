@@ -39,8 +39,8 @@ export function AuthForm({ initialMode, callbackUrl }: { initialMode: "sign-in" 
 
   return <div className="w-full max-w-md">
     <div className="mb-8 inline-flex w-full rounded-lg bg-muted p-1" role="tablist" aria-label="Authentication mode">
-      <button type="button" onClick={() => selectMode("sign-in")} aria-selected={mode === "sign-in"} className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold ${mode === "sign-in" ? "bg-card shadow-sm" : "text-muted-foreground"}`}>Sign In</button>
-      <button type="button" onClick={() => selectMode("register")} aria-selected={mode === "register"} className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold ${mode === "register" ? "bg-card shadow-sm" : "text-muted-foreground"}`}>Create Account</button>
+      <button type="button" role="tab" onClick={() => selectMode("sign-in")} aria-selected={mode === "sign-in"} className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold ${mode === "sign-in" ? "bg-card shadow-sm" : "text-muted-foreground"}`}>Sign In</button>
+      <button type="button" role="tab" onClick={() => selectMode("register")} aria-selected={mode === "register"} className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold ${mode === "register" ? "bg-card shadow-sm" : "text-muted-foreground"}`}>Create Account</button>
     </div>
     <h1 className="text-3xl font-extrabold tracking-tight">{mode === "sign-in" ? "Welcome back" : "Join GhanaVerse"}</h1>
     <p className="mt-2 leading-6 text-muted-foreground">{mode === "sign-in" ? "Sign in to continue your GhanaVerse journey." : "Create your viewer account in a few seconds."}</p>
