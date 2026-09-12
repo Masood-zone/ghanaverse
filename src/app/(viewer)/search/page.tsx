@@ -1,2 +1,2 @@
-import { FoundationPage } from "@/components/layout/foundation-page";
-export default function SearchPage() { return <FoundationPage eyebrow="Search" title="Search is coming soon." description="This public route confirms the final header navigation without implementing catalogue search." />; }
+import { redirect } from "next/navigation";
+export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) { const { q } = await searchParams; redirect(q ? `/browse?q=${encodeURIComponent(q)}` : "/browse"); }
