@@ -16,6 +16,7 @@
     "db:validate": "prisma validate",
     "db:migrate:reset": "prisma migrate reset --force",
     "db:seed": "prisma db seed",
+    "content:import:ghmdb": "tsx scripts/import-ghmoviesdb.ts",
     "check": "pnpm db:validate && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {

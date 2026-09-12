@@ -40,6 +40,7 @@ enum MediaRights {
 enum CreditType {
   CAST
   DIRECTOR
+  WRITER
   PRODUCER
 }
 enum VideoSourceType {
@@ -81,7 +82,11 @@ model Content {
   title String
   shortDescription String
   description String
+  tagline String?
   releaseYear Int?
+  releaseDate DateTime?
+  country String?
+  seriesStatus String?
   contentType ContentType
   runtimeMinutes Int?
   classification String?
@@ -93,6 +98,11 @@ model Content {
   metadataSource MetadataSource @default(MANUAL)
   sourceReferenceUrl String?
   externalId String?
+  tmdbId Int?
+  imdbId String?
+  sourceRating Float?
+  sourcePayload Json?
+  externalWatchLinks Json?
   mediaRights MediaRights @default(UNKNOWN)
   attributionNotes String?
   productionCompanyId String?
@@ -113,6 +123,7 @@ model Content {
   collectionItems CollectionItem[]
   @@index([publicationStatus, contentType])
   @@index([isFeatured, publicationStatus])
+  @@unique([metadataSource, externalId])
 }
 
 model Genre {
@@ -156,6 +167,7 @@ model ContentCredit {
   contentId String
   personId String
   creditType CreditType
+  characterName String?
   content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
   @@id([contentId, personId, creditType])
@@ -202,6 +214,7 @@ model Episode {
   title String
   description String?
   runtimeMinutes Int?
+  airDate DateTime?
   thumbnailUrl String?
   season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   videoAssets VideoAsset[]
