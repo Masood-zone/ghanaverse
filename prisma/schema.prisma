@@ -11,61 +11,301 @@ enum UserRole {
   VIEWER
   ADMIN
 }
+enum ContentType {
+  MOVIE
+  SERIES
+  DOCUMENTARY
+  CULTURAL_PROGRAMME
+  LIFESTYLE_PROGRAMME
+}
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+}
+enum MetadataSource {
+  MANUAL
+  GH_MOVIES_DB
+  YOUTUBE
+  OTHER
+}
+enum MediaRights {
+  ORIGINAL
+  LICENSED
+  CREATIVE_COMMONS
+  PUBLIC_DOMAIN
+  DEMO
+  UNKNOWN
+}
+enum CreditType {
+  CAST
+  DIRECTOR
+  PRODUCER
+}
+enum VideoSourceType {
+  MANAGED
+  REMOTE_URL
+  DEMO
+}
 
 model User {
-  id            String   @id
-  name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
-  image         String?
-  role          UserRole @default(VIEWER)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  id String @id
+  name String
+  email String @unique
+  emailVerified Boolean @default(false)
+  image String?
+  role UserRole @default(VIEWER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions Session[]
+  accounts Account[]
+  profiles ViewerProfile[]
+}
+
+model ViewerProfile {
+  id String @id @default(cuid())
+  userId String
+  name String
+  avatar String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  watchlist WatchlistItem[]
+  progress WatchProgress[]
+  @@index([userId])
+}
+
+model Content {
+  id String @id @default(cuid())
+  slug String @unique
+  title String
+  shortDescription String
+  description String
+  releaseYear Int?
+  contentType ContentType
+  runtimeMinutes Int?
+  classification String?
+  publicationStatus PublicationStatus @default(DRAFT)
+  isFeatured Boolean @default(false)
+  isPremium Boolean @default(false)
+  posterUrl String?
+  backdropUrl String?
+  metadataSource MetadataSource @default(MANUAL)
+  sourceReferenceUrl String?
+  externalId String?
+  mediaRights MediaRights @default(UNKNOWN)
+  attributionNotes String?
+  productionCompanyId String?
+  rightsHolderId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  publishedAt DateTime?
+  productionCompany ProductionCompany? @relation(fields: [productionCompanyId], references: [id], onDelete: SetNull)
+  rightsHolder RightsHolder? @relation(fields: [rightsHolderId], references: [id], onDelete: SetNull)
+  genres ContentGenre[]
+  languages ContentLanguage[]
+  credits ContentCredit[]
+  trailer Trailer?
+  seasons Season[]
+  videoAssets VideoAsset[]
+  watchlist WatchlistItem[]
+  progress WatchProgress[]
+  collectionItems CollectionItem[]
+  @@index([publicationStatus, contentType])
+  @@index([isFeatured, publicationStatus])
+}
+
+model Genre {
+  id String @id @default(cuid())
+  name String @unique
+  slug String @unique
+  contents ContentGenre[]
+}
+
+model Language {
+  id String @id @default(cuid())
+  name String @unique
+  code String @unique
+  contents ContentLanguage[]
+}
+
+model ContentGenre {
+  contentId String
+  genreId String
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  @@id([contentId, genreId])
+}
+
+model ContentLanguage {
+  contentId String
+  languageId String
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  @@id([contentId, languageId])
+}
+
+model Person {
+  id String @id @default(cuid())
+  name String @unique
+  imageUrl String?
+  credits ContentCredit[]
+}
+
+model ContentCredit {
+  contentId String
+  personId String
+  creditType CreditType
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  @@id([contentId, personId, creditType])
+}
+
+model ProductionCompany {
+  id String @id @default(cuid())
+  name String @unique
+  contents Content[]
+}
+
+model RightsHolder {
+  id String @id @default(cuid())
+  name String @unique
+  contactEmail String?
+  notes String?
+  contents Content[]
+}
+
+model Trailer {
+  id String @id @default(cuid())
+  contentId String @unique
+  youtubeVideoId String
+  title String?
+  thumbnailUrl String?
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+}
+
+model Season {
+  id String @id @default(cuid())
+  seriesId String
+  seasonNumber Int
+  title String?
+  description String?
+  series Content @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  episodes Episode[]
+  @@unique([seriesId, seasonNumber])
+}
+
+model Episode {
+  id String @id @default(cuid())
+  seasonId String
+  episodeNumber Int
+  title String
+  description String?
+  runtimeMinutes Int?
+  thumbnailUrl String?
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  videoAssets VideoAsset[]
+  progress WatchProgress[]
+  @@unique([seasonId, episodeNumber])
+}
+
+model VideoAsset {
+  id String @id @default(cuid())
+  contentId String?
+  episodeId String?
+  sourceType VideoSourceType
+  playbackUrl String
+  durationSeconds Int?
+  licenseType MediaRights
+  isPlayable Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  content Content? @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  episode Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+}
+
+model WatchlistItem {
+  id String @id @default(cuid())
+  profileId String
+  contentId String
+  createdAt DateTime @default(now())
+  profile ViewerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  @@unique([profileId, contentId])
+}
+
+model WatchProgress {
+  id String @id @default(cuid())
+  profileId String
+  contentId String?
+  episodeId String?
+  positionSeconds Int @default(0)
+  durationSeconds Int?
+  completed Boolean @default(false)
+  lastWatchedAt DateTime @default(now())
+  profile ViewerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  content Content? @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  episode Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  @@index([profileId, lastWatchedAt])
+}
+
+model Collection {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String?
+  isActive Boolean @default(true)
+  sortOrder Int @default(0)
+  items CollectionItem[]
+}
+
+model CollectionItem {
+  collectionId String
+  contentId String
+  sortOrder Int @default(0)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  @@id([collectionId, contentId])
 }
 
 model Session {
-  id        String   @id
+  id String @id
   expiresAt DateTime
-  token     String   @unique
+  token String @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
 }
 
 model Account {
-  id                    String   @id
-  accountId             String
-  providerId            String
-  userId                String
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
+  id String @id
+  accountId String
+  providerId String
+  userId String
+  accessToken String?
+  refreshToken String?
+  idToken String?
+  accessTokenExpiresAt DateTime?
   refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  scope String?
+  password String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([providerId, accountId])
   @@index([userId])
 }
 
 model Verification {
-  id         String   @id
+  id String @id
   identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
+  value String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@index([identifier])
 }
