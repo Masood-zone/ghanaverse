@@ -11,7 +11,12 @@ function createAuth(secret: string, baseURL: string) {
     emailAndPassword: { enabled: true },
     user: {
       additionalFields: {
-        role: { type: "string", required: false, defaultValue: DEFAULT_REGISTRATION_ROLE, input: false },
+        role: {
+          type: "string",
+          required: false,
+          defaultValue: DEFAULT_REGISTRATION_ROLE,
+          input: false,
+        },
       },
     },
   });
@@ -23,7 +28,8 @@ export function getAuth() {
   if (authInstance) return authInstance;
   const secret = process.env.BETTER_AUTH_SECRET;
   const baseURL = process.env.BETTER_AUTH_URL;
-  if (!secret || !baseURL) throw new Error("BETTER_AUTH_SECRET and BETTER_AUTH_URL are required.");
+  if (!secret || !baseURL)
+    throw new Error("BETTER_AUTH_SECRET and BETTER_AUTH_URL are required.");
   const configured = createAuth(secret, baseURL);
   authInstance = configured;
   return configured;
