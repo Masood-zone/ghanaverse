@@ -84,50 +84,51 @@ model ViewerProfile {
 }
 
 model Content {
-  id                  String             @id @default(cuid())
-  slug                String             @unique
-  title               String
-  shortDescription    String
-  description         String
-  tagline             String?
-  releaseYear         Int?
-  releaseDate         DateTime?
-  country             String?
-  seriesStatus        String?
-  contentType         ContentType
-  runtimeMinutes      Int?
-  classification      String?
-  publicationStatus   PublicationStatus  @default(DRAFT)
-  isFeatured          Boolean            @default(false)
-  isPremium           Boolean            @default(false)
-  posterUrl           String?
-  backdropUrl         String?
-  metadataSource      MetadataSource     @default(MANUAL)
-  sourceReferenceUrl  String?
-  externalId          String?
-  tmdbId              Int?
-  imdbId              String?
-  sourceRating        Float?
-  sourcePayload       Json?
-  externalWatchLinks  Json?
-  mediaRights         MediaRights        @default(UNKNOWN)
-  attributionNotes    String?
-  productionCompanyId String?
-  rightsHolderId      String?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  publishedAt         DateTime?
-  productionCompany   ProductionCompany? @relation(fields: [productionCompanyId], references: [id], onDelete: SetNull)
-  rightsHolder        RightsHolder?      @relation(fields: [rightsHolderId], references: [id], onDelete: SetNull)
-  genres              ContentGenre[]
-  languages           ContentLanguage[]
-  credits             ContentCredit[]
-  trailer             Trailer?
-  seasons             Season[]
-  videoAssets         VideoAsset[]
-  watchlist           WatchlistItem[]
-  progress            WatchProgress[]
-  collectionItems     CollectionItem[]
+  id                   String             @id @default(cuid())
+  slug                 String             @unique
+  title                String
+  shortDescription     String
+  description          String
+  tagline              String?
+  releaseYear          Int?
+  releaseDate          DateTime?
+  country              String?
+  seriesStatus         String?
+  contentType          ContentType
+  runtimeMinutes       Int?
+  classification       String?
+  classificationRecord Classification?    @relation(fields: [classification], references: [name], onDelete: Restrict, onUpdate: Cascade)
+  publicationStatus    PublicationStatus  @default(DRAFT)
+  isFeatured           Boolean            @default(false)
+  isPremium            Boolean            @default(false)
+  posterUrl            String?
+  backdropUrl          String?
+  metadataSource       MetadataSource     @default(MANUAL)
+  sourceReferenceUrl   String?
+  externalId           String?
+  tmdbId               Int?
+  imdbId               String?
+  sourceRating         Float?
+  sourcePayload        Json?
+  externalWatchLinks   Json?
+  mediaRights          MediaRights        @default(UNKNOWN)
+  attributionNotes     String?
+  productionCompanyId  String?
+  rightsHolderId       String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  publishedAt          DateTime?
+  productionCompany    ProductionCompany? @relation(fields: [productionCompanyId], references: [id], onDelete: SetNull)
+  rightsHolder         RightsHolder?      @relation(fields: [rightsHolderId], references: [id], onDelete: SetNull)
+  genres               ContentGenre[]
+  languages            ContentLanguage[]
+  credits              ContentCredit[]
+  trailer              Trailer?
+  seasons              Season[]
+  videoAssets          VideoAsset[]
+  watchlist            WatchlistItem[]
+  progress             WatchProgress[]
+  collectionItems      CollectionItem[]
 
   @@unique([metadataSource, externalId])
   @@index([publicationStatus, contentType])
@@ -146,6 +147,13 @@ model Language {
   name     String            @unique
   code     String            @unique
   contents ContentLanguage[]
+}
+
+model Classification {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  slug     String    @unique
+  contents Content[]
 }
 
 model ContentGenre {

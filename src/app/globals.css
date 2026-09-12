@@ -14,6 +14,8 @@
   --input: #d1d5db;
   --ring: #d97706;
   --destructive: #dc2626;
+  --admin-surface: #eef3ff;
+  --ink-warm: #6b2500;
 }
 @theme inline {
   --color-background: var(--background);
@@ -43,6 +45,15 @@ body {
   color: var(--foreground);
   font-family: var(--font-jakarta), Arial, sans-serif;
 }
+a { text-underline-offset: 3px; }
+::selection { background: #fde7b0; color: #3b2100; }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.gv-container { width: min(100% - 2rem, 1280px); margin-inline: auto; }
+.gv-kente-line { height: 2px; background: linear-gradient(90deg, #d97706 0 45%, #dc2626 45% 68%, #15803d 68%); }
+.gv-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+.gv-scroll::-webkit-scrollbar { height: 7px; }
+.gv-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
 button:not(:disabled) {
   cursor: pointer;
 }
+@media (min-width: 768px) { .gv-container { width: min(100% - 3rem, 1280px); } }

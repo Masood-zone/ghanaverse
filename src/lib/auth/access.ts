@@ -19,6 +19,13 @@ export async function requireUser() {
   return { session, user };
 }
 
+export async function getOptionalUser() {
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) return null;
+  const user = await getPrisma().user.findUnique({ where: { id: session.user.id } });
+  return user ? { session, user } : null;
+}
+
 export async function requireAdmin() {
   const access = await requireUser();
   if (!isAdminRole(access.user.role)) throw new AccessError("ADMIN_REQUIRED");
