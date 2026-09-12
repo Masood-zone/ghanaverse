@@ -1,0 +1,1 @@
+import { FoundationPage } from "@/components/layout/foundation-page"; export default function Page() { return <FoundationPage eyebrow="Administration" title="Royalties" description="Royalty calculations are intentionally deferred." />; }

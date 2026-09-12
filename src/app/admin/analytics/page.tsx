@@ -1,0 +1,1 @@
+import { FoundationPage } from "@/components/layout/foundation-page"; export default function Page() { return <FoundationPage eyebrow="Administration" title="Analytics" description="Analytics calculations are intentionally deferred." />; }

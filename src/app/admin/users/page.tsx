@@ -1,0 +1,1 @@
+import { FoundationPage } from "@/components/layout/foundation-page"; export default function Page() { return <FoundationPage eyebrow="Administration" title="Users & Subscriptions" description="User administration and subscriptions remain out of scope for the foundation." />; }

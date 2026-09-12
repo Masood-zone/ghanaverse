@@ -1,0 +1,1 @@
+import { FoundationPage } from "@/components/layout/foundation-page"; export default function Page() { return <FoundationPage eyebrow="Administration" title="Content" description="Content management begins after the Phase 3 foundation." />; }

@@ -1,0 +1,1 @@
+import { FoundationPage } from "@/components/layout/foundation-page"; export default function Page() { return <FoundationPage eyebrow="Administration" title="Metadata & Rights" description="Metadata and rights workflows are not implemented in Phase 3." />; }
