@@ -1,6 +1,9 @@
 export const APPROVED_REMOTE_IMAGE_HOSTS = new Set([
   "media.ghmoviesdb.com",
   "i.ytimg.com",
+  "image.tmdb.org",
+  "images.unsplash.com",
+  "upload.wikimedia.org",
 ]);
 
 export function safeRemoteImageUrl(value: unknown): string | undefined {
