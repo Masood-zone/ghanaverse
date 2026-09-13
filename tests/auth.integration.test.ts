@@ -27,6 +27,7 @@ describe("Better Auth foundation", () => {
     const body = await session.json();
     expect(body.user.role).toBe("VIEWER");
     expect((await getPrisma().user.findUniqueOrThrow({ where: { email } })).role).toBe("VIEWER");
+    expect(await getPrisma().viewerProfile.count({ where: { user: { email } } })).toBe(1);
   });
 
   it("signs in and signs out a credential account", async () => {

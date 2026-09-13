@@ -9,6 +9,23 @@ function createAuth(secret: string, baseURL: string) {
     secret,
     database: prismaAdapter(getPrisma(), { provider: "postgresql" }),
     emailAndPassword: { enabled: true },
+    databaseHooks: {
+      account: {
+        create: {
+          before: async (account) => {
+            const prisma = getPrisma();
+            try {
+              const existing = await prisma.viewerProfile.findFirst({ where: { userId: account.userId } });
+              if (!existing) await prisma.viewerProfile.create({ data: { userId: account.userId, name: "My Profile", avatar: "adinkra" } });
+            } catch (error) {
+              try { await prisma.user.delete({ where: { id: account.userId } }); }
+              catch { throw new Error("REGISTRATION_CLEANUP_FAILED", { cause: error }); }
+              throw new Error("PROFILE_PROVISIONING_FAILED", { cause: error });
+            }
+          },
+        },
+      },
+    },
     user: {
       additionalFields: {
         role: {
