@@ -21,6 +21,7 @@ export function ViewerNavigation() {
   const pathname = usePathname()
   const router = useRouter()
   const links = session ? [...publicLinks, ...memberLinks] : publicLinks
+  const user = session?.user
   const linkClass = (href: string) =>
     cn(
       "rounded-md px-3 py-2 text-sm font-medium transition",
@@ -75,17 +76,21 @@ export function ViewerNavigation() {
           />
         </form>
         {session ? (
-          <details className="relative">
-            <summary
-              aria-label="Account menu"
-              className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-full bg-amber-800 text-white"
-            >
-              <UserRound className="h-4 w-4" />
-            </summary>
-            <div className="absolute top-12 right-0 z-50 grid w-52 gap-1 rounded-lg border bg-card p-2 shadow-xl">
-              {accountMenu}
-            </div>
-          </details>
+          <div className="flex items-center gap-3">
+            {user ? <UserIdentity user={user} compact /> : null}
+            <details className="relative">
+              <summary
+                aria-label="Account menu"
+                className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-full bg-amber-800 text-white"
+              >
+                <UserRound className="h-4 w-4" />
+              </summary>
+              <div className="absolute top-12 right-0 z-50 grid w-56 gap-1 rounded-lg border bg-card p-2 shadow-xl">
+                {user ? <UserIdentity user={user} /> : null}
+                {accountMenu}
+              </div>
+            </details>
+          </div>
         ) : (
           <>
             <Link className="text-sm font-semibold text-slate-700" href="/auth">
@@ -108,6 +113,7 @@ export function ViewerNavigation() {
           <Menu className="h-5 w-5" />
         </summary>
         <div className="absolute top-12 right-0 z-50 grid w-64 gap-1 rounded-lg border bg-card p-2 shadow-xl">
+          {user ? <UserIdentity user={user} /> : null}
           {links.map(([label, href]) => (
             <Link key={href} href={href} className={linkClass(href)}>
               {label}
@@ -134,5 +140,27 @@ export function ViewerNavigation() {
         </div>
       </details>
     </>
+  )
+}
+
+function UserIdentity({
+  user,
+  compact = false,
+}: {
+  user: { name: string; email: string }
+  compact?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        "min-w-0",
+        compact
+          ? "hidden w-52 text-right xl:block"
+          : "mb-1 border-b px-3 py-2"
+      )}
+    >
+      <p className="truncate text-sm font-bold text-foreground">{user.name}</p>
+      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+    </div>
   )
 }

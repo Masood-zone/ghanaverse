@@ -234,7 +234,7 @@ export function RegistryContent({ creators = false }: { creators?: boolean }) {
         <p className="mt-2 text-xs leading-6 text-slate-600">
           {kind === "rightsHolders"
             ? "Rights holders are registered entities for attribution and administrative records. Their details remain private to administrators."
-            : "Maintain consistent catalogue records. Referenced records are protected from deletion."}
+            : ""}
         </p>
       </div>
       {editing !== undefined ? (

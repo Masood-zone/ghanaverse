@@ -73,7 +73,7 @@ export function AuthForm({
     }
   }
   return (
-    <div>
+    <div className="w-full max-w-md">
       <h1 className="text-3xl font-extrabold">
         {mode === "sign-in" ? "Welcome back" : "Join GhanaVerse"}
       </h1>
