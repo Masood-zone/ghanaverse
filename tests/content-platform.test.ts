@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { afterEach, describe, expect, it } from "vitest";
-import { PublicationStatus, ContentType } from "@/generated/prisma/enums";
+import { PublicationStatus, ContentType } from "@/app/generated/prisma/enums";
 import { catalogueQuerySchema, getCataloguePage } from "@/lib/catalogue";
 import { getPrisma } from "@/lib/prisma";
 import { isPermittedPlaybackAsset, safeArtworkUrl } from "@/lib/image-policy";

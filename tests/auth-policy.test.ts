@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UserRole } from "@/generated/prisma/enums";
+import { UserRole } from "@/app/generated/prisma/enums";
 import { DEFAULT_REGISTRATION_ROLE, isAdminRole } from "@/lib/auth/policy";
 import { getRegistrationValidationError, REGISTRATION_FAILURE_MESSAGE, SIGN_IN_FAILURE_MESSAGE } from "@/lib/auth/form-validation";
 

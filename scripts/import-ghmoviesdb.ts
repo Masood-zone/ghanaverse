@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient } from "../app/generated/prisma/client";
 import { importGHMoviesDB } from "../src/lib/importers/ghmoviesdb";
 
 const args = process.argv.slice(2); const flag = (name: string) => args.includes(name); const value = (name: string) => { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; };
