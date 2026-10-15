@@ -14,10 +14,16 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:validate": "prisma validate",
-    "db:migrate:reset": "prisma migrate reset --force",
+    "db:migrate:reset": "tsx scripts/database.ts reset && prisma migrate deploy && prisma db seed",
     "db:seed": "prisma db seed",
     "content:import:ghmdb": "tsx scripts/import-ghmoviesdb.ts",
-    "check": "pnpm db:validate && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm db:validate && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "db:backup": "tsx scripts/database.ts backup",
+    "db:reset:verified": "tsx scripts/database.ts reset",
+    "test:prepare": "tsx scripts/test-database.ts",
+    "qa:browser": "tsx scripts/browser-qa.ts",
+    "qa:viewer": "tsx scripts/viewer-qa.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.4",
@@ -44,6 +50,7 @@
     "zod": "^4.6.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",

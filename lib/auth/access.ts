@@ -1,50 +1,57 @@
-import "server-only";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { getAuth } from "@/lib/auth";
-import { getPrisma } from "@/lib/prisma";
-import { isAdminRole } from "@/lib/auth/policy";
+import "server-only"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
+import { getAuth } from "@/lib/auth"
+import { getPrisma } from "@/lib/prisma"
+import { isAdminRole } from "@/lib/auth/policy"
 
 export class AccessError extends Error {
   constructor(public readonly code: "AUTH_REQUIRED" | "ADMIN_REQUIRED") {
-    super(code);
+    super(code)
   }
 }
 
 export async function requireUser() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
-  if (!session) throw new AccessError("AUTH_REQUIRED");
-  const user = await getPrisma().user.findUnique({ where: { id: session.user.id } });
-  if (!user) throw new AccessError("AUTH_REQUIRED");
-  return { session, user };
+  const session = await getAuth().api.getSession({ headers: await headers() })
+  if (!session) throw new AccessError("AUTH_REQUIRED")
+  const user = await getPrisma().user.findUnique({
+    where: { id: session.user.id },
+  })
+  if (!user || user.isSuspended) throw new AccessError("AUTH_REQUIRED")
+  return { session, user }
 }
 
 export async function getOptionalUser() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
-  if (!session) return null;
-  const user = await getPrisma().user.findUnique({ where: { id: session.user.id } });
-  return user ? { session, user } : null;
+  const session = await getAuth().api.getSession({ headers: await headers() })
+  if (!session) return null
+  const user = await getPrisma().user.findUnique({
+    where: { id: session.user.id },
+  })
+  return user && !user.isSuspended ? { session, user } : null
 }
 
 export async function requireAdmin() {
-  const access = await requireUser();
-  if (!isAdminRole(access.user.role)) throw new AccessError("ADMIN_REQUIRED");
-  return access;
+  const access = await requireUser()
+  if (!isAdminRole(access.user.role)) throw new AccessError("ADMIN_REQUIRED")
+  return access
 }
 
 export async function requireUserPage(callbackUrl: string) {
   try {
-    return await requireUser();
-  } catch {
-    redirect(`/auth?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+    return await requireUser()
+  } catch (error) {
+    if (!(error instanceof AccessError)) throw error
+    redirect(`/auth?callbackUrl=${encodeURIComponent(callbackUrl)}`)
   }
 }
 
 export async function requireAdminPage() {
   try {
-    return await requireAdmin();
+    return await requireAdmin()
   } catch (error) {
-    if (error instanceof AccessError && error.code === "AUTH_REQUIRED") redirect("/auth?callbackUrl=%2Fadmin");
-    redirect("/");
+    if (!(error instanceof AccessError)) throw error
+    if (error instanceof AccessError && error.code === "AUTH_REQUIRED")
+      redirect("/auth?callbackUrl=%2Fadmin")
+    redirect("/")
   }
 }

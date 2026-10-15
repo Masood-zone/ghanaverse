@@ -1,9 +1,62 @@
-import { Film, ShieldCheck } from "@/components/common/icons";
-import Link from "next/link";
-import { AuthForm } from "@/components/auth/auth-form";
-import { Brand } from "@/components/layout/brand";
+import { Film, ShieldCheck } from "@/components/common/icons"
+import Link from "next/link"
+import { AuthForm } from "@/components/auth/auth-form"
+import { Brand } from "@/components/layout/brand"
 
-export default async function AuthPage({ searchParams }: { searchParams: Promise<{ mode?: string; callbackUrl?: string }> }) {
-  const query = await searchParams; const callbackUrl = query.callbackUrl?.startsWith("/") && !query.callbackUrl.startsWith("//") ? query.callbackUrl : "/";
-  return <main className="relative min-h-screen bg-background p-4 sm:p-8"><div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,#fef3c7,transparent_28%),radial-gradient(circle_at_90%_90%,#dcfce7,transparent_25%)]" /><div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-2xl border bg-white shadow-2xl md:grid-cols-[.85fr_1.15fr]"><aside className="relative hidden overflow-hidden bg-muted p-10 md:flex md:flex-col md:justify-between"><div className="absolute inset-y-0 right-0 w-1.5 bg-[linear-gradient(#d97706,#dc2626,#15803d)]" /><Brand /><div><span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-800"><ShieldCheck className="mr-2 h-4 w-4" />Welcome to GhanaVerse</span><h1 className="mt-8 text-4xl font-black tracking-tight">Ghanaian stories,<br />all in one place.</h1><p className="mt-4 max-w-sm leading-7 text-muted-foreground">Discover cinema, television, documentaries, cultural programmes, and the people who bring them to life.</p><div className="mt-10 rounded-xl border bg-white p-5 shadow-sm"><Film className="h-6 w-6 text-primary" /><h2 className="mt-4 font-bold">A catalogue made for discovery</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Save stories, follow series, and continue watching from your personal viewer profile.</p></div></div><Link href="/" className="text-sm font-semibold text-muted-foreground hover:text-primary">← Return to GhanaVerse</Link></aside><section className="flex items-center justify-center p-6 md:p-12"><AuthForm initialMode={query.mode === "register" ? "register" : "sign-in"} callbackUrl={callbackUrl} /></section></div></main>;
+export default async function AuthPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string; callbackUrl?: string }>
+}) {
+  const query = await searchParams
+  const callbackUrl =
+    query.callbackUrl?.startsWith("/") && !query.callbackUrl.startsWith("//")
+      ? query.callbackUrl
+      : "/"
+  return (
+    <main className="relative min-h-screen bg-background p-4 sm:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,#fef3c7,transparent_28%),radial-gradient(circle_at_90%_90%,#dcfce7,transparent_25%)]" />
+      <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-2xl border bg-white shadow-2xl md:grid-cols-[.85fr_1.15fr]">
+        <aside className="relative hidden overflow-hidden bg-muted p-10 md:flex md:flex-col md:justify-between">
+          <div className="absolute inset-y-0 right-0 w-1.5 bg-[linear-gradient(#d97706,#dc2626,#15803d)]" />
+          <Brand />
+          <div>
+            <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold tracking-wider text-green-800 uppercase">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Welcome to GhanaVerse
+            </span>
+            <h1 className="mt-8 text-4xl font-black tracking-tight">
+              Ghanaian stories,
+              <br />
+              all in one place.
+            </h1>
+            <p className="mt-4 max-w-sm leading-7 text-muted-foreground">
+              Discover cinema, television, documentaries, cultural programmes,
+              and the people who bring them to life.
+            </p>
+            <div className="mt-10 rounded-xl border bg-white p-5 shadow-sm">
+              <Film className="h-6 w-6 text-primary" />
+              <h2 className="mt-4 font-bold">A catalogue made for discovery</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Save stories, follow series, and continue watching from your
+                personal viewer profile.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/"
+            className="text-sm font-semibold text-muted-foreground hover:text-primary"
+          >
+            ← Return to GhanaVerse
+          </Link>
+        </aside>
+        <section className="flex items-center justify-center p-6 md:p-12">
+          <AuthForm
+            initialMode={query.mode === "register" ? "register" : "sign-in"}
+            callbackUrl={callbackUrl}
+          />
+        </section>
+      </div>
+    </main>
+  )
 }

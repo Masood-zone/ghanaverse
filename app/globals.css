@@ -45,30 +45,150 @@ body {
   color: var(--foreground);
   font-family: var(--font-jakarta), Arial, sans-serif;
 }
-a { text-underline-offset: 3px; }
-::selection { background: #fde7b0; color: #3b2100; }
-:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.gv-container { width: min(100% - 2rem, 1280px); margin-inline: auto; }
-.gv-kente-line { height: 2px; background: linear-gradient(90deg, #d97706 0 45%, #dc2626 45% 68%, #15803d 68%); }
-.gv-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
-.gv-scroll::-webkit-scrollbar { height: 7px; }
-.gv-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+a {
+  text-underline-offset: 3px;
+}
+::selection {
+  background: #fde7b0;
+  color: #3b2100;
+}
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.gv-container {
+  width: min(100% - 2rem, 1280px);
+  margin-inline: auto;
+}
+.gv-kente-line {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    #d97706 0 45%,
+    #dc2626 45% 68%,
+    #15803d 68%
+  );
+}
+.gv-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+.gv-scroll::-webkit-scrollbar {
+  height: 7px;
+}
+.gv-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
 button:not(:disabled) {
   cursor: pointer;
 }
-@media (min-width: 768px) { .gv-container { width: min(100% - 3rem, 1280px); } }
+@media (min-width: 768px) {
+  .gv-container {
+    width: min(100% - 3rem, 1280px);
+  }
+}
 
-.material-symbols-outlined { font-family: "Material Symbols Outlined"; font-weight: normal; font-style: normal; font-size: 24px; display:inline-block; line-height:1; letter-spacing:normal; text-transform:none; white-space:nowrap; word-wrap:normal; direction:ltr; -webkit-font-smoothing:antialiased; font-feature-settings:"liga"; }
-.material-symbols-outlined.filled {font-variation-settings:"FILL" 1;}
-.gv-admin {--background:#f8f9ff; --primary:#8d4b00; --primary-hover:#6b3700; --muted:#eff3ff; --border:#e1e7f2; background:var(--background); color:#121c2a; font-size:14px;}
-.gv-panel {background:#eff3ff; border-radius:12px; padding:24px;}
-.gv-table {width:100%; text-align:left; border-collapse:collapse; font-size:13px;}
-.gv-table th {background:#dfe9fc; padding:16px; font-size:11px; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap;}
-.gv-table td {padding:16px; border-bottom:1px solid #eff3ff; background:white;}
-.gv-table tbody tr:hover td {background:#f8f9ff;}
-.gv-field {display:block; width:100%; border:1px solid #d1d5db; border-radius:6px; padding:10px 12px; background:white; font-size:14px; min-height:42px;}
-.gv-label {display:grid; gap:8px; font-size:12px; font-weight:600;}
-.gv-action {display:inline-flex; gap:8px; align-items:center; justify-content:center; background:#ffdcc3; color:#6b3700; padding:10px 16px; border-radius:6px; font-weight:700; font-size:13px;}
-.gv-action:disabled {opacity:.5; cursor:wait;}
-.gv-action.secondary {background:#dfe9fc; color:#121c2a;}
-.gv-action.danger {background:#fee2e2; color:#b91c1c;}
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  display: inline-block;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "liga";
+}
+.material-symbols-outlined.filled {
+  font-variation-settings: "FILL" 1;
+}
+.gv-admin {
+  --background: #f8f9ff;
+  --primary: #8d4b00;
+  --primary-hover: #6b3700;
+  --muted: #eff3ff;
+  --border: #e1e7f2;
+  background: var(--background);
+  color: #121c2a;
+  font-size: 14px;
+}
+.gv-panel {
+  background: #eff3ff;
+  border-radius: 12px;
+  padding: 24px;
+}
+.gv-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.gv-table th {
+  background: #dfe9fc;
+  padding: 16px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.gv-table td {
+  padding: 16px;
+  border-bottom: 1px solid #eff3ff;
+  background: white;
+}
+.gv-table tbody tr:hover td {
+  background: #f8f9ff;
+}
+.gv-field {
+  display: block;
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: white;
+  font-size: 14px;
+  min-height: 42px;
+}
+.gv-label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.gv-action {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  background: #ffdcc3;
+  color: #6b3700;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.gv-action:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.gv-action.secondary {
+  background: #dfe9fc;
+  color: #121c2a;
+}
+.gv-action.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@font-face {
+  font-family: "Material Symbols Outlined";
+  src: url("/fonts/material-symbols-outlined.ttf");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: block;
+}

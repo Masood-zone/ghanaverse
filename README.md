@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GhanaVerse
 
-## Getting Started
+Next.js App Router application using PostgreSQL/Prisma, Better Auth, Axios, TanStack Query, React Hook Form/Zod, Material Symbols, and Cloudinary artwork uploads.
 
-First, run the development server:
+## Run locally
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
+Use Node.js and the pnpm version declared in `package.json`.
+
+```powershell
+pnpm install
+Copy-Item .env.example .env
+# Configure the private environment variables described below.
+pnpm db:generate
+pnpm exec prisma migrate deploy
+pnpm db:seed
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>. Sign in at `/auth?callbackUrl=%2Fadmin` with the administrator email and password configured in your private environment file. Existing installations should retain their configured `.env` instead of replacing it.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Required: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD` (any non-empty value). `SEED_ADMIN_NAME` is optional. The seed creates the administrator and reference genres, languages, and classifications; it creates no demo users or catalogue titles. Sign-in accepts short seeded administrator passwords; viewer registration requires at least eight characters.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Artwork requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. These are server-only. Without them, drafts remain usable and uploads return an explicit unavailable response. `YOUTUBE_API_KEY` is only needed for trailer search; a YouTube video ID or URL can be entered directly.
 
-## Learn More
+## Development and checks
 
-To learn more about Next.js, take a look at the following resources:
+```powershell
+pnpm lint
+pnpm typecheck
+pnpm db:validate
+pnpm test:prepare
+pnpm test
+pnpm build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`test:prepare` migrates the `ghanaverse_test` schema configured by `TEST_DATABASE_URL`. On Windows, `pnpm test:prepare --local` provisions an isolated PostgreSQL instance using the installed tools, bound to `127.0.0.1:55439`, with generated data ignored under `.test-postgres`. Later prepare runs restart it when needed. Stop it with `pnpm exec tsx scripts/test-database.ts --stop-local`. Tests refuse to run against the development `public` schema. Database migrations are explicit; `build` only generates Prisma and builds the application.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Install the browser once with `pnpm exec playwright install chromium`. `pnpm qa:browser` runs the administrator acceptance flow against a running local server, including a live Cloudinary artwork upload. It creates temporary QA records, captures desktop/mobile screenshots under `artifacts/implementation-qa`, and removes its fixture records and uploaded provider image afterward.
 
-## Deploy on Vercel
+`pnpm qa:viewer` verifies registration, profile editing/selection and refresh, owned account/library queries, watchlist changes, access restrictions, and logout with temporary fixtures.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Database backup and reset
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`pnpm db:backup` creates an ignored PostgreSQL archive, checks its table-data listing, and records its SHA-256 checksum. PostgreSQL 18 tools are discovered through `POSTGRES_BIN`, defaulting to the installed Windows PostgreSQL directory.
+
+`pnpm db:reset:verified` clears the development schema only after checking the verified archive and target fingerprint. Then apply migrations and run the seed. A reset consumes its backup verification; take a new backup before another reset. Never use the reset command against a database whose data you intend to retain.
+
+See [architecture and administrator workflows](docs/ARCHITECTURE.md), [verification results](docs/VERIFICATION.md), and [changed-file inventory](docs/CHANGES.md).

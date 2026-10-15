@@ -1,34 +1,364 @@
-import { ExternalLink, Film, Play } from "@/components/common/icons";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ContentArtwork, PersonAvatar } from "@/components/catalogue/content-artwork";
-import { ContentRow } from "@/components/catalogue/content-row";
-import { TrailerDialog } from "@/components/catalogue/trailer-dialog";
-import { WatchlistButton } from "@/components/catalogue/watchlist-button";
-import { getOptionalUser } from "@/lib/auth/access";
-import { getPublishedContent, getPublishedContentBySlug } from "@/lib/catalogue";
-import { safeExternalUrl } from "@/lib/image-policy";
-import { getPrisma } from "@/lib/prisma";
-import { getActiveProfile } from "@/lib/profiles";
+import { ExternalLink, Film, Play } from "@/components/common/icons"
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import {
+  ContentArtwork,
+  PersonAvatar,
+} from "@/components/catalogue/content-artwork"
+import { ContentRow } from "@/components/catalogue/content-row"
+import { TrailerDialog } from "@/components/catalogue/trailer-dialog"
+import { WatchlistButton } from "@/components/catalogue/watchlist-button"
+import { getOptionalUser } from "@/lib/auth/access"
+import { getPublishedContent, getPublishedContentBySlug } from "@/lib/catalogue"
+import { safeExternalUrl } from "@/lib/image-policy"
+import { getPrisma } from "@/lib/prisma"
+import { getActiveProfile } from "@/lib/profiles"
 
-type WatchLink = { url?: string; service?: string; provider?: string; type?: string };
-const display = (value: string) => value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+type WatchLink = {
+  url?: string
+  service?: string
+  provider?: string
+  type?: string
+}
+const display = (value: string) =>
+  value
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 
-export default async function TitlePage({ params }: { params: Promise<{ slug: string }> }) {
-  const content = await getPublishedContentBySlug((await params).slug); if (!content) notFound();
-  const access = await getOptionalUser(); const profile = access ? await getActiveProfile(access.user.id) : null;
-  const saved = profile ? Boolean(await getPrisma().watchlistItem.findUnique({ where: { profileId_contentId: { profileId: profile.id, contentId: content.id } } })) : false;
-  const genres = content.genres.map(({ genre }) => genre.name); const languages = content.languages.map(({ language }) => language.name);
-  const cast = content.credits.filter((credit) => credit.creditType === "CAST"); const crew = content.credits.filter((credit) => credit.creditType !== "CAST");
-  const links = (Array.isArray(content.externalWatchLinks) ? content.externalWatchLinks : []) as WatchLink[];
-  const mainAsset = !content.isPremium ? content.videoAssets.find((asset) => asset.isPlayable && asset.sourceType !== "MANAGED") : undefined;
-  const related = (await getPublishedContent({ genre: content.genres[0]?.genre.slug, pageSize: 12 })).filter((item) => item.id !== content.id).slice(0, 8);
-  return <>
-    <section className="relative isolate overflow-hidden bg-slate-950 text-white"><div className="absolute inset-0"><ContentArtwork src={content.backdropUrl} alt="" variant="backdrop" priority /></div><div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/75 to-black/20" /><div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" /><div className="gv-container relative grid min-h-[520px] items-end gap-8 py-12 md:grid-cols-[220px_1fr] md:py-16"><div className="relative mx-auto aspect-[2/3] w-44 overflow-hidden rounded-lg border-4 border-white/80 shadow-2xl md:mx-0 md:w-full"><ContentArtwork src={content.posterUrl} alt={`${content.title} poster`} priority /></div><div className="pb-2"><div className="flex flex-wrap gap-2"><span className="rounded bg-primary px-2 py-1 text-[10px] font-extrabold uppercase">{display(content.contentType)}</span>{content.productionCompany ? <span className="rounded bg-white/15 px-2 py-1 text-[10px] font-semibold">{content.productionCompany.name}</span> : null}</div><h1 className="mt-3 text-4xl font-black tracking-tight md:text-6xl">{content.title}</h1>{content.tagline ? <p className="mt-2 text-lg italic text-amber-100">“{content.tagline}”</p> : null}<div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">{[content.releaseYear, content.runtimeMinutes && `${content.runtimeMinutes} min`, content.classification, ...genres.slice(0, 3)].filter(Boolean).map((item) => <span key={String(item)} className="rounded bg-white/15 px-2 py-1">{item}</span>)}</div><p className="mt-5 max-w-3xl text-base leading-7 text-white/85">{content.description}</p><div className="mt-7 flex flex-wrap gap-3">{mainAsset ? <Link href={`/watch/${mainAsset.id}`} className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-bold text-white"><Play className="h-4 w-4 fill-current" />Play Now</Link> : null}{content.trailer ? <TrailerDialog videoId={content.trailer.youtubeVideoId} title={content.title} /> : null}<WatchlistButton contentId={content.id} slug={content.slug} authenticated={Boolean(access)} initialSaved={saved} /></div>{content.isPremium ? <p className="mt-4 text-sm font-semibold text-amber-200">Premium playback is not available during Phase 4.</p> : null}</div></div></section>
-    <div className="gv-container py-10"><div className="grid gap-6 lg:grid-cols-[1fr_320px]"><main className="space-y-7">{content.seasons.length ? <section className="rounded-xl border bg-white p-5 md:p-7"><div className="flex items-end justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-primary">Series</p><h2 className="mt-1 text-2xl font-extrabold">Episodes</h2></div><span className="text-sm text-muted-foreground">{content.seasons.length} season{content.seasons.length === 1 ? "" : "s"}</span></div><div className="mt-6 space-y-4">{content.seasons.map((season) => <div key={season.id}><h3 className="mb-3 font-bold">{season.title ?? `Season ${season.seasonNumber}`}</h3><div className="space-y-3">{season.episodes.map((episode) => { const asset = !content.isPremium ? episode.videoAssets.find((item) => item.isPlayable && item.sourceType !== "MANAGED") : undefined; return <article key={episode.id} className="grid gap-4 rounded-lg bg-muted p-3 sm:grid-cols-[180px_1fr]"><div className="relative aspect-video overflow-hidden rounded-md"><ContentArtwork src={episode.thumbnailUrl ?? content.backdropUrl} alt="" variant="landscape" />{asset ? <Link href={`/watch/${asset.id}`} className="absolute inset-0 grid place-items-center bg-black/15"><span className="grid h-10 w-10 place-items-center rounded-full bg-primary text-white"><Play className="h-4 w-4 fill-current" /></span></Link> : null}</div><div className="self-center"><p className="text-[10px] font-bold uppercase tracking-wider text-primary">Episode {episode.episodeNumber}</p><h4 className="mt-1 font-bold">{episode.title}</h4>{episode.description ? <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{episode.description}</p> : null}<p className="mt-2 text-xs text-muted-foreground">{episode.runtimeMinutes ? `${episode.runtimeMinutes} min` : null}</p></div></article>; })}</div></div>)}</div></section> : null}
-      {cast.length ? <section className="rounded-xl border bg-white p-5 md:p-7"><div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Leading Cast &amp; Creatives</h2><span className="text-xs text-muted-foreground">{cast.length + crew.length} credits</span></div><div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[...cast, ...crew].slice(0, 12).map((credit) => <div key={`${credit.personId}-${credit.creditType}`} className="flex items-center gap-3"><PersonAvatar name={credit.person.name} src={credit.person.imageUrl} className="h-14 w-14" /><div><h3 className="text-sm font-bold">{credit.person.name}</h3><p className="text-xs text-muted-foreground">{credit.characterName || display(credit.creditType)}</p></div></div>)}</div></section> : null}</main>
-      <aside className="space-y-5"><section className="rounded-xl border bg-white p-5"><h2 className="flex items-center gap-2 font-bold"><Film className="h-4 w-4 text-primary" />Content Details</h2><dl className="mt-5 space-y-4 text-sm">{genres.length ? <Detail label="Genres" value={genres.join(", ")} /> : null}{languages.length ? <Detail label="Languages" value={languages.join(", ")} /> : null}{content.classification ? <Detail label="Classification" value={content.classification} /> : null}{content.productionCompany ? <Detail label="Production" value={content.productionCompany.name} /> : null}{content.rightsHolder ? <Detail label="Rights Holder" value={content.rightsHolder.name} /> : null}{content.country ? <Detail label="Country" value={content.country} /> : null}</dl></section>{links.some((link) => safeExternalUrl(link.url)) ? <section className="rounded-xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-bold">Available on</h2><div className="mt-4 grid gap-2">{links.flatMap((link, index) => { const url = safeExternalUrl(link.url); return url ? [<a key={`${url}-${index}`} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm font-semibold text-primary">Watch on {link.service ?? link.provider ?? "provider"}<ExternalLink className="h-4 w-4" /></a>] : []; })}</div><p className="mt-3 text-xs leading-5 text-muted-foreground">External availability is not GhanaVerse playback.</p></section> : null}</aside></div><ContentRow title="More Like This" eyebrow="Related Ghanaian stories" items={related} /></div>
-  </>;
+export default async function TitlePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const content = await getPublishedContentBySlug((await params).slug)
+  if (!content) notFound()
+  const access = await getOptionalUser()
+  const profile = access ? await getActiveProfile(access.user.id) : null
+  const saved = profile
+    ? Boolean(
+        await getPrisma().watchlistItem.findUnique({
+          where: {
+            profileId_contentId: {
+              profileId: profile.id,
+              contentId: content.id,
+            },
+          },
+        })
+      )
+    : false
+  const genres = content.genres.map(({ genre }) => genre.name)
+  const languages = content.languages.map(({ language }) => language.name)
+  const cast = content.credits.filter((credit) => credit.creditType === "CAST")
+  const crew = content.credits.filter((credit) => credit.creditType !== "CAST")
+  const links = (
+    Array.isArray(content.externalWatchLinks) ? content.externalWatchLinks : []
+  ) as WatchLink[]
+  const mainAsset = !content.isPremium
+    ? content.videoAssets.find(
+        (asset) => asset.isPlayable && asset.sourceType !== "MANAGED"
+      )
+    : undefined
+  const related = (
+    await getPublishedContent({
+      genre: content.genres[0]?.genre.slug,
+      pageSize: 12,
+    })
+  )
+    .filter((item) => item.id !== content.id)
+    .slice(0, 8)
+  return (
+    <>
+      <section className="relative isolate overflow-hidden bg-slate-950 text-white">
+        <div className="absolute inset-0">
+          <ContentArtwork
+            src={content.backdropUrl}
+            alt=""
+            variant="backdrop"
+            priority
+          />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/75 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+        <div className="gv-container relative grid min-h-[520px] items-end gap-8 py-12 md:grid-cols-[220px_1fr] md:py-16">
+          <div className="relative mx-auto aspect-[2/3] w-44 overflow-hidden rounded-lg border-4 border-white/80 shadow-2xl md:mx-0 md:w-full">
+            <ContentArtwork
+              src={content.posterUrl}
+              alt={`${content.title} poster`}
+              priority
+            />
+          </div>
+          <div className="pb-2">
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded bg-primary px-2 py-1 text-[10px] font-extrabold uppercase">
+                {display(content.contentType)}
+              </span>
+              {content.productionCompany ? (
+                <span className="rounded bg-white/15 px-2 py-1 text-[10px] font-semibold">
+                  {content.productionCompany.name}
+                </span>
+              ) : null}
+            </div>
+            <h1 className="mt-3 text-4xl font-black tracking-tight md:text-6xl">
+              {content.title}
+            </h1>
+            {content.tagline ? (
+              <p className="mt-2 text-lg text-amber-100 italic">
+                “{content.tagline}”
+              </p>
+            ) : null}
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+              {[
+                content.releaseYear,
+                content.runtimeMinutes && `${content.runtimeMinutes} min`,
+                content.classification,
+                ...genres.slice(0, 3),
+              ]
+                .filter(Boolean)
+                .map((item) => (
+                  <span
+                    key={String(item)}
+                    className="rounded bg-white/15 px-2 py-1"
+                  >
+                    {item}
+                  </span>
+                ))}
+            </div>
+            <p className="mt-5 max-w-3xl text-base leading-7 text-white/85">
+              {content.description}
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              {mainAsset ? (
+                <Link
+                  href={`/watch/${mainAsset.id}`}
+                  className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-bold text-white"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  Play Now
+                </Link>
+              ) : null}
+              {content.trailer ? (
+                <TrailerDialog
+                  videoId={content.trailer.youtubeVideoId}
+                  title={content.title}
+                />
+              ) : null}
+              <WatchlistButton
+                contentId={content.id}
+                slug={content.slug}
+                authenticated={Boolean(access)}
+                initialSaved={saved}
+              />
+            </div>
+            {content.isPremium ? (
+              <p className="mt-4 text-sm font-semibold text-amber-200">
+                Premium playback is not available during Phase 4.
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+      <div className="gv-container py-10">
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <main className="space-y-7">
+            {content.seasons.length ? (
+              <section className="rounded-xl border bg-white p-5 md:p-7">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[.16em] text-primary uppercase">
+                      Series
+                    </p>
+                    <h2 className="mt-1 text-2xl font-extrabold">Episodes</h2>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {content.seasons.length} season
+                    {content.seasons.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <div className="mt-6 space-y-4">
+                  {content.seasons.map((season) => (
+                    <div key={season.id}>
+                      <h3 className="mb-3 font-bold">
+                        {season.title ?? `Season ${season.seasonNumber}`}
+                      </h3>
+                      <div className="space-y-3">
+                        {season.episodes.map((episode) => {
+                          const asset = !content.isPremium
+                            ? episode.videoAssets.find(
+                                (item) =>
+                                  item.isPlayable &&
+                                  item.sourceType !== "MANAGED"
+                              )
+                            : undefined
+                          return (
+                            <article
+                              key={episode.id}
+                              className="grid gap-4 rounded-lg bg-muted p-3 sm:grid-cols-[180px_1fr]"
+                            >
+                              <div className="relative aspect-video overflow-hidden rounded-md">
+                                <ContentArtwork
+                                  src={
+                                    episode.thumbnailUrl ?? content.backdropUrl
+                                  }
+                                  alt=""
+                                  variant="landscape"
+                                />
+                                {asset ? (
+                                  <Link
+                                    href={`/watch/${asset.id}`}
+                                    className="absolute inset-0 grid place-items-center bg-black/15"
+                                  >
+                                    <span className="grid h-10 w-10 place-items-center rounded-full bg-primary text-white">
+                                      <Play className="h-4 w-4 fill-current" />
+                                    </span>
+                                  </Link>
+                                ) : null}
+                              </div>
+                              <div className="self-center">
+                                <p className="text-[10px] font-bold tracking-wider text-primary uppercase">
+                                  Episode {episode.episodeNumber}
+                                </p>
+                                <h4 className="mt-1 font-bold">
+                                  {episode.title}
+                                </h4>
+                                {episode.description ? (
+                                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
+                                    {episode.description}
+                                  </p>
+                                ) : null}
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                  {episode.runtimeMinutes
+                                    ? `${episode.runtimeMinutes} min`
+                                    : null}
+                                </p>
+                              </div>
+                            </article>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {cast.length + crew.length ? (
+              <section className="rounded-xl border bg-white p-5 md:p-7">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-extrabold">
+                    Leading Cast &amp; Creatives
+                  </h2>
+                  <span className="text-xs text-muted-foreground">
+                    {cast.length + crew.length} credits
+                  </span>
+                </div>
+                <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {[...cast, ...crew].slice(0, 12).map((credit) => (
+                    <div
+                      key={`${credit.personId}-${credit.creditType}`}
+                      className="flex items-center gap-3"
+                    >
+                      <PersonAvatar
+                        name={credit.person.name}
+                        src={credit.person.imageUrl}
+                        className="h-14 w-14"
+                      />
+                      <div>
+                        <h3 className="text-sm font-bold">
+                          {credit.person.name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {credit.characterName || display(credit.creditType)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </main>
+          <aside className="space-y-5">
+            <section className="rounded-xl border bg-white p-5">
+              <h2 className="flex items-center gap-2 font-bold">
+                <Film className="h-4 w-4 text-primary" />
+                Content Details
+              </h2>
+              <dl className="mt-5 space-y-4 text-sm">
+                {genres.length ? (
+                  <Detail label="Genres" value={genres.join(", ")} />
+                ) : null}
+                {languages.length ? (
+                  <Detail label="Languages" value={languages.join(", ")} />
+                ) : null}
+                {content.classification ? (
+                  <Detail
+                    label="Classification"
+                    value={content.classification}
+                  />
+                ) : null}
+                {content.productionCompany ? (
+                  <Detail
+                    label="Production"
+                    value={content.productionCompany.name}
+                  />
+                ) : null}
+                {content.rightsHolder ? (
+                  <Detail
+                    label="Rights Holder"
+                    value={content.rightsHolder.name}
+                  />
+                ) : null}
+                {content.country ? (
+                  <Detail label="Country" value={content.country} />
+                ) : null}
+              </dl>
+            </section>
+            {links.some((link) => safeExternalUrl(link.url)) ? (
+              <section className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                <h2 className="font-bold">Available on</h2>
+                <div className="mt-4 grid gap-2">
+                  {links.flatMap((link, index) => {
+                    const url = safeExternalUrl(link.url)
+                    return url
+                      ? [
+                          <a
+                            key={`${url}-${index}`}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm font-semibold text-primary"
+                          >
+                            Watch on{" "}
+                            {link.service ?? link.provider ?? "provider"}
+                            <ExternalLink className="h-4 w-4" />
+                          </a>,
+                        ]
+                      : []
+                  })}
+                </div>
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  External availability is not GhanaVerse playback.
+                </p>
+              </section>
+            ) : null}
+          </aside>
+        </div>
+        <ContentRow
+          title="More Like This"
+          eyebrow="Related Ghanaian stories"
+          items={related}
+        />
+      </div>
+    </>
+  )
 }
 
-function Detail({ label, value }: { label: string; value: string }) { return <div><dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</dt><dd className="mt-1 font-medium text-slate-800">{value}</dd></div>; }
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+        {label}
+      </dt>
+      <dd className="mt-1 font-medium text-slate-800">{value}</dd>
+    </div>
+  )
+}

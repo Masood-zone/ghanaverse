@@ -1,0 +1,208 @@
+"use client"
+import { useViewerLibrary } from "@/services/viewer/library"
+import { QueryState } from "@/components/common/query-state"
+import { Clock3, History, Library } from "@/components/common/icons"
+import Link from "next/link"
+import type { ReactNode } from "react"
+import { ContentCard } from "@/components/catalogue/content-card"
+import { LandscapeCard } from "@/components/catalogue/landscape-card"
+import { cn } from "@/lib/utils"
+
+export function LibraryContent({
+  tab,
+  page,
+}: {
+  tab: "list" | "history"
+  page: number
+}) {
+  const query = useViewerLibrary()
+  if (!query.data)
+    return (
+      <QueryState
+        pending={query.isPending}
+        error={query.error}
+        retry={query.refetch}
+      />
+    )
+  const data = query.data,
+    pageSize = 12
+  if (!data.profile)
+    return (
+      <section className="gv-container py-14">
+        <h1 className="text-3xl font-bold">My Library</h1>
+        <p className="mt-3 text-muted-foreground">
+          Create a viewer profile to save titles and keep viewing history.
+        </p>
+        <Link className="gv-action mt-5" href="/profiles">
+          Manage Profiles
+        </Link>
+      </section>
+    )
+  const source = tab === "history" ? data.history : data.watchlist
+  const totalPages = Math.max(1, Math.ceil(source.length / pageSize))
+  return (
+    <section className="gv-container py-10 md:py-14">
+      <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-[10px] font-bold tracking-[.16em] text-amber-900 uppercase">
+        Curated viewer space
+      </span>
+      <div className="mt-4 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <div>
+          <h1 className="text-4xl font-black tracking-tight">My Library</h1>
+          <p className="mt-2 text-muted-foreground">
+            {data.profile?.name}&apos;s saved titles and playback history.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Stat
+            icon={<Library />}
+            label="Saved"
+            value={String(data.watchlist.length)}
+          />
+          <Stat
+            icon={<Clock3 />}
+            label="History"
+            value={String(data.history.length)}
+          />
+        </div>
+      </div>
+      <nav className="mt-8 flex gap-2 border-b">
+        <Link
+          href="/library"
+          className={cn(
+            "inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold",
+            tab === "list"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground"
+          )}
+        >
+          <Library className="h-4 w-4" />
+          My List
+        </Link>
+        <Link
+          href="/library?tab=history"
+          className={cn(
+            "inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold",
+            tab === "history"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground"
+          )}
+        >
+          <History className="h-4 w-4" />
+          Viewing History
+        </Link>
+      </nav>
+      {source.length ? (
+        tab === "list" ? (
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {data.watchlist
+              .slice((page - 1) * pageSize, page * pageSize)
+              .map(({ content }) => (
+                <ContentCard key={content.id} item={content} />
+              ))}
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {data.history
+              .slice((page - 1) * pageSize, page * pageSize)
+              .map((item) => {
+                const content = item.content ?? item.episode?.season.series
+                const asset =
+                  item.episode?.videoAssets?.find(
+                    (entry) =>
+                      entry.isPlayable && entry.sourceType !== "MANAGED"
+                  ) ??
+                  content?.videoAssets.find(
+                    (entry) =>
+                      entry.isPlayable && entry.sourceType !== "MANAGED"
+                  )
+                const percent = item.durationSeconds
+                  ? (item.positionSeconds / item.durationSeconds) * 100
+                  : 0
+                return content ? (
+                  <LandscapeCard
+                    key={item.id}
+                    title={
+                      item.episode
+                        ? `${content.title}: ${item.episode.title}`
+                        : content.title
+                    }
+                    subtitle={
+                      item.completed
+                        ? "Completed"
+                        : `${Math.round(percent)}% watched`
+                    }
+                    progress={percent}
+                    image={item.episode?.thumbnailUrl ?? content.backdropUrl}
+                    href={
+                      asset ? `/watch/${asset.id}` : `/title/${content.slug}`
+                    }
+                  />
+                ) : null
+              })}
+          </div>
+        )
+      ) : (
+        <div className="mt-8 rounded-xl border bg-white p-12 text-center">
+          <h2 className="text-xl font-bold">
+            {tab === "list"
+              ? "Your list is ready for its first story"
+              : "No viewing history yet"}
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Browse the catalogue to discover Ghanaian cinema and culture.
+          </p>
+          <Link
+            href="/browse"
+            className="mt-5 inline-block rounded-md bg-primary px-5 py-3 text-sm font-bold text-white"
+          >
+            Browse Catalogue
+          </Link>
+        </div>
+      )}
+      <div className="mt-10 flex items-center justify-between border-t pt-5 text-sm">
+        <span className="text-muted-foreground">
+          Page {page} of {totalPages}
+        </span>
+        <div className="flex gap-2">
+          {page > 1 ? (
+            <Link
+              className="rounded-md border bg-white px-4 py-2"
+              href={`/library?tab=${tab}&page=${page - 1}`}
+            >
+              Previous
+            </Link>
+          ) : null}
+          {page < totalPages ? (
+            <Link
+              className="rounded-md bg-primary px-4 py-2 text-white"
+              href={`/library?tab=${tab}&page=${page + 1}`}
+            >
+              Next
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  )
+}
+function Stat({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border bg-white px-4 py-3">
+      <span className="text-primary [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+      <div>
+        <p className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+          {label}
+        </p>
+        <p className="font-extrabold">{value} titles</p>
+      </div>
+    </div>
+  )
+}

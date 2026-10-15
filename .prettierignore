@@ -1,0 +1,8 @@
+node_modules
+.next
+.backups
+app/generated
+artifacts
+pnpm-lock.yaml
+
+.test-postgres

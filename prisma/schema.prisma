@@ -47,6 +47,7 @@ enum CreditType {
   DIRECTOR
   WRITER
   PRODUCER
+  CREATOR
 }
 
 enum VideoSourceType {
@@ -59,6 +60,7 @@ model User {
   id            String          @id
   name          String
   email         String          @unique
+  isSuspended Boolean @default(false)
   emailVerified Boolean         @default(false)
   image         String?
   role          UserRole        @default(VIEWER)
@@ -348,4 +350,26 @@ model Verification {
   updatedAt  DateTime @updatedAt
 
   @@index([identifier])
+}
+
+model AuditLog {
+ id String @id @default(cuid())
+ actorId String
+ action String
+ entityType String
+ entityId String
+ createdAt DateTime @default(now())
+ @@index([createdAt])
+ @@index([entityType, entityId])
+}
+model ArtworkAsset {
+ id String @id @default(cuid())
+ publicId String @unique
+ secureUrl String @unique
+ purpose String
+ width Int
+ height Int
+ bytes Int
+ uploadedById String
+ createdAt DateTime @default(now())
 }
