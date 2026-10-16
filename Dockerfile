@@ -11,4 +11,4 @@ COPY lib ./lib
 COPY services ./services
 COPY scripts/video-worker.ts ./scripts/video-worker.ts
 USER node
-CMD ["sh", "-c", "pnpm db:deploy && exec pnpm video:worker"]
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && exec node --conditions=react-server --import tsx scripts/video-worker.ts"]
