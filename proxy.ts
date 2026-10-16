@@ -6,6 +6,7 @@ const protectedPrefixes = [
   "/account",
   "/watch",
   "/admin",
+  "/creator",
 ]
 
 export function proxy(request: NextRequest) {
@@ -30,5 +31,6 @@ export const config = {
     "/account/:path*",
     "/watch/:path*",
     "/admin/:path*",
+    "/creator/:path*",
   ],
 }

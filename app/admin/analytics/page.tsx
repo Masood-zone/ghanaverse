@@ -1,10 +1,4 @@
-import { FoundationPage } from "@/components/layout/foundation-page"
+import { AnalyticsContent } from "@/components/analytics/analytics-content"
 export default function Page() {
-  return (
-    <FoundationPage
-      eyebrow="Administration"
-      title="Analytics"
-      description="Analytics calculations are intentionally deferred."
-    />
-  )
+  return <AnalyticsContent audience="admin" />
 }

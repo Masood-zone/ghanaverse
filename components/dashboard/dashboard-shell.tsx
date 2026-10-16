@@ -13,6 +13,7 @@ const navigation = [
   ["Collections", "/admin/collections", "collections_bookmark"],
   ["Users", "/admin/users", "group"],
   ["Activity", "/admin/activity", "history"],
+  ["Analytics", "/admin/analytics", "analytics"],
 ] as const
 export function DashboardShell({
   children,

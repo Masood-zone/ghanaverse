@@ -1,4 +1,5 @@
 import "server-only"
+export { extractYouTubeVideoId } from "@/lib/playback-source"
 
 export type YouTubeSearchResult = {
   videoId: string
@@ -6,22 +7,6 @@ export type YouTubeSearchResult = {
   channel: string
   thumbnailUrl?: string
   publishedAt?: string
-}
-
-export function extractYouTubeVideoId(input: string) {
-  const value = input.trim()
-  if (/^[A-Za-z0-9_-]{11}$/.test(value)) return value
-  try {
-    const url = new URL(value)
-    const id =
-      url.hostname === "youtu.be"
-        ? url.pathname.slice(1)
-        : (url.searchParams.get("v") ??
-          url.pathname.match(/\/(embed|shorts)\/([A-Za-z0-9_-]{11})/)?.[2])
-    return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : undefined
-  } catch {
-    return undefined
-  }
 }
 
 export async function searchEmbeddableVideos(

@@ -555,6 +555,9 @@ function EditorForm({
                       {options.rightsHolders.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name}
+                          {item.memberships?.length
+                            ? ` — ${item.memberships.map((m) => m.user.name).join(", ")}`
+                            : " (no linked account)"}
                         </option>
                       ))}
                     </select>

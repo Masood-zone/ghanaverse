@@ -1,9 +1,19 @@
 import { z } from "zod"
 import { UserRole } from "@/app/generated/prisma/enums"
-export const userUpdateSchema = z.object({
-  role: z.enum(UserRole),
-  isSuspended: z.boolean(),
-})
+export const userUpdateSchema = z
+  .object({
+    role: z.enum(UserRole),
+    isSuspended: z.boolean(),
+    rightsHolderIds: z.array(z.string().min(1)).max(100).default([]),
+  })
+  .refine(
+    (value) =>
+      value.role !== "RIGHTS_HOLDER" || value.rightsHolderIds.length > 0,
+    {
+      message: "Assign at least one rights holder",
+      path: ["rightsHolderIds"],
+    }
+  )
 export const creatorSchema = z.object({
   name: z.string().trim().min(1).max(180),
   imageUrl: z.string().max(2000).nullable().optional(),

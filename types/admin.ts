@@ -19,6 +19,10 @@ export type Option = {
   contactEmail?: string | null
   notes?: string | null
   imageUrl?: string | null
+  phone?: string | null
+  address?: string | null
+  website?: string | null
+  memberships?: { user: { id: string; name: string; email: string } }[]
   _count?: { contents?: number; credits?: number }
 }
 export type AdminOptions = {
@@ -64,7 +68,11 @@ export type AdminUser = {
   id: string
   name: string
   email: string
-  role: "ADMIN" | "VIEWER"
+  role: "ADMIN" | "VIEWER" | "RIGHTS_HOLDER"
+  rightsHolderMemberships: {
+    rightsHolderId: string
+    rightsHolder: { name: string }
+  }[]
   isSuspended: boolean
   createdAt: string
   _count: { profiles: number }
@@ -75,6 +83,7 @@ export type UsersPage = {
   admins: number
   viewers: number
   suspended: number
+  rightsHolders: number
   page: number
   totalPages: number
 }

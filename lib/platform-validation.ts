@@ -1,4 +1,6 @@
 import { z } from "zod"
+import { rightsHolderDetailsSchema } from "@/lib/validation/rights-holders"
+import { sessionTelemetrySchema } from "@/lib/validation/playback"
 import {
   ContentType,
   CreditType,
@@ -40,6 +42,7 @@ export const progressSchema = z.object({
   positionSeconds: z.number().int().min(0),
   durationSeconds: z.number().int().positive().optional().nullable(),
   completed: z.boolean().optional().default(false),
+  telemetry: sessionTelemetrySchema.optional(),
 })
 
 export const creditSchema = z.object({
@@ -140,18 +143,7 @@ export const metadataSchemas = {
       .max(100),
   }),
   "production-companies": z.object({ name: z.string().trim().min(1).max(180) }),
-  "rights-holders": z.object({
-    name: z.string().trim().min(1).max(180),
-    contactEmail: z
-      .string()
-      .trim()
-      .email()
-      .optional()
-      .nullable()
-      .or(z.literal(""))
-      .transform((value) => value || null),
-    notes: optionalText(2000),
-  }),
+  "rights-holders": rightsHolderDetailsSchema,
 } as const
 
 export function slugify(value: string) {

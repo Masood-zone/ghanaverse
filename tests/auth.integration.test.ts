@@ -48,30 +48,33 @@ describe("Better Auth foundation", () => {
       await getPrisma().session.count({ where: { userId: user.id } })
     ).toBe(0)
   })
-  it("registers as VIEWER despite an attempted ADMIN role and maintains a session", async () => {
-    const email = `phase3-${Date.now()}@example.test`
-    createdEmails.add(email)
-    const response = await authRequest("/sign-up/email", {
-      name: "Phase Three",
-      email,
-      password: "foundation-password",
-      role: "ADMIN",
-    })
-    expect(response.status).toBe(200)
-    const cookie = response.headers
-      .getSetCookie()
-      .map((value) => value.split(";")[0])
-      .join("; ")
-    const session = await authRequest("/get-session", undefined, cookie)
-    const body = await session.json()
-    expect(body.user.role).toBe("VIEWER")
-    expect(
-      (await getPrisma().user.findUniqueOrThrow({ where: { email } })).role
-    ).toBe("VIEWER")
-    expect(
-      await getPrisma().viewerProfile.count({ where: { user: { email } } })
-    ).toBe(1)
-  })
+  it.each(["ADMIN", "RIGHTS_HOLDER"])(
+    "registers as VIEWER despite an attempted %s role and maintains a session",
+    async (role) => {
+      const email = `phase3-${Date.now()}@example.test`
+      createdEmails.add(email)
+      const response = await authRequest("/sign-up/email", {
+        name: "Phase Three",
+        email,
+        password: "foundation-password",
+        role,
+      })
+      expect(response.status).toBe(200)
+      const cookie = response.headers
+        .getSetCookie()
+        .map((value) => value.split(";")[0])
+        .join("; ")
+      const session = await authRequest("/get-session", undefined, cookie)
+      const body = await session.json()
+      expect(body.user.role).toBe("VIEWER")
+      expect(
+        (await getPrisma().user.findUniqueOrThrow({ where: { email } })).role
+      ).toBe("VIEWER")
+      expect(
+        await getPrisma().viewerProfile.count({ where: { user: { email } } })
+      ).toBe(1)
+    }
+  )
 
   it("signs in and signs out a credential account", async () => {
     const email = `phase3-${Date.now()}@example.test`

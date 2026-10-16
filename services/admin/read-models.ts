@@ -145,7 +145,12 @@ export async function readAdmin(url: URL) {
       }),
       db.rightsHolder.findMany({
         orderBy: { name: "asc" },
-        include: { _count: { select: { contents: true } } },
+        include: {
+          memberships: {
+            select: { user: { select: { id: true, name: true, email: true } } },
+          },
+          _count: { select: { contents: true } },
+        },
       }),
       db.person.findMany({
         orderBy: { name: "asc" },
@@ -173,7 +178,9 @@ export async function readAdmin(url: URL) {
             ],
           }
         : {}),
-      ...(role === "ADMIN" || role === "VIEWER" ? { role } : {}),
+      ...(["ADMIN", "VIEWER", "RIGHTS_HOLDER"].includes(role ?? "")
+        ? { role: role as "ADMIN" | "VIEWER" | "RIGHTS_HOLDER" }
+        : {}),
       ...(status === "active" || status === "suspended"
         ? { isSuspended: status === "suspended" }
         : {}),
@@ -189,6 +196,12 @@ export async function readAdmin(url: URL) {
           isSuspended: true,
           createdAt: true,
           _count: { select: { profiles: true } },
+          rightsHolderMemberships: {
+            select: {
+              rightsHolderId: true,
+              rightsHolder: { select: { name: true } },
+            },
+          },
         },
         take,
         skip: (page - 1) * take,
@@ -205,6 +218,7 @@ export async function readAdmin(url: URL) {
       admins,
       viewers,
       suspended,
+      rightsHolders: await db.user.count({ where: { role: "RIGHTS_HOLDER" } }),
       page,
       totalPages: Math.max(1, Math.ceil(total / take)),
     }

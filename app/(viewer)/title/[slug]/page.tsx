@@ -10,7 +10,7 @@ import { TrailerDialog } from "@/components/catalogue/trailer-dialog"
 import { WatchlistButton } from "@/components/catalogue/watchlist-button"
 import { getOptionalUser } from "@/lib/auth/access"
 import { getPublishedContent, getPublishedContentBySlug } from "@/lib/catalogue"
-import { safeExternalUrl } from "@/lib/image-policy"
+import { isPermittedPlaybackAsset, safeExternalUrl } from "@/lib/image-policy"
 import { getPrisma } from "@/lib/prisma"
 import { getActiveProfile } from "@/lib/profiles"
 
@@ -55,9 +55,7 @@ export default async function TitlePage({
     Array.isArray(content.externalWatchLinks) ? content.externalWatchLinks : []
   ) as WatchLink[]
   const mainAsset = !content.isPremium
-    ? content.videoAssets.find(
-        (asset) => asset.isPlayable && asset.sourceType !== "MANAGED"
-      )
+    ? content.videoAssets.find(isPermittedPlaybackAsset)
     : undefined
   const related = (
     await getPublishedContent({
@@ -184,11 +182,7 @@ export default async function TitlePage({
                       <div className="space-y-3">
                         {season.episodes.map((episode) => {
                           const asset = !content.isPremium
-                            ? episode.videoAssets.find(
-                                (item) =>
-                                  item.isPlayable &&
-                                  item.sourceType !== "MANAGED"
-                              )
+                            ? episode.videoAssets.find(isPermittedPlaybackAsset)
                             : undefined
                           return (
                             <article

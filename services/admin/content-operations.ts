@@ -17,6 +17,26 @@ import {
 import { publicationIssues } from "@/lib/validation/admin"
 import { artwork, editable } from "./guards"
 import { editorInclude } from "./read-models"
+import { resolvePlaybackSource } from "@/lib/playback-source"
+async function rejectPaidYouTube(tx: Prisma.TransactionClient, id: string) {
+  const assets = await tx.videoAsset.findMany({
+    where: {
+      OR: [{ contentId: id }, { episode: { season: { seriesId: id } } }],
+    },
+  })
+  if (
+    assets.some(
+      (asset) =>
+        resolvePlaybackSource(asset.sourceType, asset.playbackUrl)?.kind ===
+        "youtube"
+    )
+  )
+    throw new PlatformError(
+      400,
+      "YOUTUBE_PREMIUM",
+      "Remove YouTube playback before marking this title premium."
+    )
+}
 export async function mutateContent({ tx, id, child, method, raw }: Context) {
   let result: { id: string } | undefined
   if (!child) {
@@ -24,6 +44,7 @@ export async function mutateContent({ tx, id, child, method, raw }: Context) {
     if (method === "DELETE") result = await tx.content.delete({ where: { id } })
     else {
       const input = contentMutationSchema.parse(raw)
+      if (id && input.isPremium) await rejectPaidYouTube(tx, id)
       if (input.publicationStatus === "PUBLISHED")
         throw new PlatformError(
           409,
@@ -120,6 +141,7 @@ export async function mutateContent({ tx, id, child, method, raw }: Context) {
     if (!content)
       throw new PlatformError(404, "NOT_FOUND", "Title was not found")
     if (status === "PUBLISHED") {
+      if (content.isPremium) await rejectPaidYouTube(tx, id)
       const issues = publicationIssues(content)
       if (issues.length)
         throw new PlatformError(400, "NOT_READY", issues.join(". "))

@@ -1,5 +1,7 @@
 # Verification
 
+Latest rights-holder, playback and analytics results are in [IMPLEMENTATION_VERIFICATION.md](IMPLEMENTATION_VERIFICATION.md), including the existing importer blocker. The earlier phase results below are retained as historical verification.
+
 Verified locally on 15 October 2026. No deployment was performed.
 
 ## Automated checks

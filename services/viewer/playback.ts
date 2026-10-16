@@ -15,12 +15,14 @@ export function useSaveProgress() {
   })
 }
 // Browser page-unload delivery needs fetch's keepalive transport.
-export function flushProgress(input: ProgressInput) {
-  return fetch("/api/progress", {
+export async function flushProgress(input: ProgressInput) {
+  const response = await fetch("/api/progress", {
     method: "PUT",
     credentials: "include",
     keepalive: true,
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
   })
+  if (!response.ok) throw new Error("Viewing progress could not be saved")
+  return response
 }

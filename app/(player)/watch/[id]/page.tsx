@@ -90,11 +90,12 @@ export default async function WatchPage({
           <PlayerState
             icon={<AlertTriangle />}
             title="Playback is not permitted for this asset"
-            body="Only explicitly playable DEMO and REMOTE_URL assets can be opened in GhanaVerse."
+            body="This title needs an enabled, supported playback source."
           />
         ) : (
           <VideoPlayer
             assetId={asset.id}
+            sourceType={asset.sourceType}
             src={asset.playbackUrl}
             poster={asset.episode?.thumbnailUrl ?? content.backdropUrl}
             initialPosition={

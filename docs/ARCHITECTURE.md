@@ -40,7 +40,7 @@ The editor uses one form context across tabs with nested credit fields, dirty-st
 
 The administrator operational phase includes users, creators, metadata/rights, content, curation, and activity. Existing viewer functionality and routes are retained through the migration. Broader viewer feature development follows administrator acceptance.
 
-Part 4 subscription, payment, advanced analytics, and royalty screens remain the references for subsequent commercial phases. Their deferred routes are excluded from operational navigation. Material Symbols are served locally, with the upstream license beside the font.
+Part 4 subscription, payment, and royalty screens remain references for subsequent commercial phases. Viewing analytics is now operational under administrator Analytics and rights-holder reports. Material Symbols are served locally, with the upstream license beside the font. See `RIGHTS_PLAYBACK_ANALYTICS.md` for account ownership, source selection, immediate stream counting, viewing measurements, and report boundaries.
 
 
 ## Existing viewer workflows

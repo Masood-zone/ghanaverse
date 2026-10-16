@@ -39,6 +39,8 @@ Install the browser once with `pnpm exec playwright install chromium`. `pnpm qa:
 
 `pnpm qa:viewer` verifies registration, profile editing/selection and refresh, owned account/library queries, watchlist changes, access restrictions, and logout with temporary fixtures.
 
+`pnpm qa:rights` verifies administrator-created rights-holder accounts, content ownership, YouTube-link detection, minutes conversion, immediate stream counting, reports and CSV export against the running local server. It uses a simulated YouTube API for deterministic checks, decodes a generated native video, and separately attempts live YouTube playback. Temporary QA records are removed afterward. See [rights-holder and analytics guide](docs/RIGHTS_PLAYBACK_ANALYTICS.md) for access rules, metrics, and future revenue options.
+
 ## Database backup and reset
 
 `pnpm db:backup` creates an ignored PostgreSQL archive, checks its table-data listing, and records its SHA-256 checksum. PostgreSQL 18 tools are discovered through `POSTGRES_BIN`, defaulting to the installed Windows PostgreSQL directory.

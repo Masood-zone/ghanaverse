@@ -5,7 +5,8 @@ export type AccountData = {
   id: string
   name: string
   email: string
-  role: "ADMIN" | "VIEWER"
+  role: "ADMIN" | "VIEWER" | "RIGHTS_HOLDER"
+  hasRightsHolderReports: boolean
   profiles: ViewerProfile[]
   activeId?: string
 }

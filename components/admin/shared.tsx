@@ -35,7 +35,7 @@ export { QueryState } from "@/components/common/query-state"
 export function Status({ value }: { value: string }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold whitespace-nowrap ${["PUBLISHED", "Active", "ADMIN"].includes(value) ? "bg-green-100 text-green-800" : ["DRAFT", "VIEWER"].includes(value) ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}
+      className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold whitespace-nowrap ${["PUBLISHED", "Active", "ADMIN"].includes(value) ? "bg-green-100 text-green-800" : ["DRAFT", "VIEWER", "RIGHTS_HOLDER"].includes(value) ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}
     >
       {value.replaceAll("_", " ")}
     </span>

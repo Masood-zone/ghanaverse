@@ -2,6 +2,7 @@ import { apiSuccess } from "@/lib/api-response"
 import { requireUser } from "@/lib/auth/access"
 import { routeError } from "@/lib/route-error"
 import { getProfilesData } from "@/services/viewer/operations"
+import { getPrisma } from "@/lib/prisma"
 export async function GET() {
   try {
     const { user } = await requireUser()
@@ -10,6 +11,13 @@ export async function GET() {
       name: user.name,
       email: user.email,
       role: user.role,
+      hasRightsHolderReports:
+        user.role === "RIGHTS_HOLDER" &&
+        Boolean(
+          await getPrisma().rightsHolderMembership.count({
+            where: { userId: user.id },
+          })
+        ),
       ...(await getProfilesData(user.id)),
     })
   } catch (error) {

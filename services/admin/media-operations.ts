@@ -16,7 +16,7 @@ import {
   videoAssetSchema,
 } from "@/lib/platform-validation"
 import { extractYouTubeVideoId } from "@/lib/youtube"
-import { safePlaybackUrl } from "@/lib/image-policy"
+import { resolvePlaybackSource } from "@/lib/playback-source"
 import { artwork, editable } from "./guards"
 export async function mutateMedia({
   tx,
@@ -146,15 +146,19 @@ export async function mutateMedia({
           "SERIES_REQUIRED",
           "Only series can have episode assets"
         )
-      const playbackUrl = safePlaybackUrl(
-        input.playbackUrl,
-        input.sourceType === "DEMO"
-      )
-      if (!playbackUrl || input.sourceType === "MANAGED")
+      const source = resolvePlaybackSource(input.sourceType, input.playbackUrl)
+      const playbackUrl = source?.url
+      if (!source || !playbackUrl)
         throw new PlatformError(
           400,
           "INVALID_PLAYBACK",
-          "Use an HTTPS remote URL or local demo file"
+          "Use a valid YouTube URL, HTTPS video-file URL, or local demo file"
+        )
+      if (source.kind === "youtube" && parent.isPremium)
+        throw new PlatformError(
+          400,
+          "YOUTUBE_PREMIUM",
+          "YouTube videos cannot be offered as paid playback."
         )
       if (
         input.isPlayable &&
@@ -168,6 +172,8 @@ export async function mutateMedia({
         )
       const data = {
         ...input,
+        sourceType:
+          source.kind === "youtube" ? ("YOUTUBE" as const) : input.sourceType,
         playbackUrl,
         contentId: episodeId ? null : contentId,
         episodeId: episodeId ?? null,

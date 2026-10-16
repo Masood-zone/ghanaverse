@@ -34,6 +34,9 @@ const formSchema = z.object({
   contactEmail: z.union([z.email(), z.literal("")]),
   notes: z.string().max(2000),
   imageUrl: z.string(),
+  phone: z.string().max(60),
+  address: z.string().max(500),
+  website: z.url().or(z.literal("")),
 })
 type Values = z.infer<typeof formSchema>
 function RegistryForm({
@@ -54,6 +57,9 @@ function RegistryForm({
       contactEmail: record?.contactEmail ?? "",
       notes: record?.notes ?? "",
       imageUrl: record?.imageUrl ?? "",
+      phone: record?.phone ?? "",
+      address: record?.address ?? "",
+      website: record?.website ?? "",
     },
   })
   const imageUrl = useWatch({ control: form.control, name: "imageUrl" })
@@ -69,6 +75,9 @@ function RegistryForm({
         if (kind === "rightsHolders") {
           body.contactEmail = values.contactEmail
           body.notes = values.notes
+          body.phone = values.phone
+          body.address = values.address
+          body.website = values.website
         }
         if (kind === "people") body.imageUrl = values.imageUrl || null
         mutation.mutate(
@@ -135,6 +144,27 @@ function RegistryForm({
                 rows={3}
                 {...form.register("notes")}
               />
+            </label>
+            <label className="gv-label">
+              Phone
+              <input
+                className="gv-field"
+                type="tel"
+                {...form.register("phone")}
+              />
+            </label>
+            <label className="gv-label">
+              Website
+              <input
+                className="gv-field"
+                type="url"
+                {...form.register("website")}
+              />
+              <FormError message={form.formState.errors.website?.message} />
+            </label>
+            <label className="gv-label md:col-span-2">
+              Address
+              <input className="gv-field" {...form.register("address")} />
             </label>
           </>
         ) : null}

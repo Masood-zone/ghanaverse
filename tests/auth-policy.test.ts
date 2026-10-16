@@ -29,8 +29,12 @@ describe("foundation registration policy", () => {
     expect(isAdminRole(UserRole.ADMIN)).toBe(true)
     expect(isAdminRole(UserRole.VIEWER)).toBe(false)
   })
-  it("defines only the two Phase 3 roles", () =>
-    expect(Object.values(UserRole)).toEqual(["VIEWER", "ADMIN"]))
+  it("defines the viewer, rights-holder and administrator roles", () =>
+    expect(Object.values(UserRole)).toEqual([
+      "VIEWER",
+      "RIGHTS_HOLDER",
+      "ADMIN",
+    ]))
   it("requires matching registration passwords before an auth request", () => {
     expect(
       getRegistrationValidationError("viewer-password", "different-password")

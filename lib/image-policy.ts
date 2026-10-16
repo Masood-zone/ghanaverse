@@ -1,3 +1,5 @@
+import { resolvePlaybackSource } from "@/lib/playback-source"
+
 export const APPROVED_REMOTE_IMAGE_HOSTS = new Set([
   "res.cloudinary.com",
   "media.ghmoviesdb.com",
@@ -60,9 +62,8 @@ export function isPermittedPlaybackAsset(asset: {
   playbackUrl: unknown
   isPlayable: boolean
 }) {
-  if (!asset.isPlayable || !["DEMO", "REMOTE_URL"].includes(asset.sourceType))
-    return false
-  return Boolean(
-    safePlaybackUrl(asset.playbackUrl, asset.sourceType === "DEMO")
+  return (
+    asset.isPlayable &&
+    Boolean(resolvePlaybackSource(asset.sourceType, asset.playbackUrl))
   )
 }

@@ -4,6 +4,7 @@ import { QueryState } from "@/components/common/query-state"
 import { Mail, UserRound, Users } from "@/components/common/icons"
 import Link from "next/link"
 import { SignOutButton } from "@/components/auth/sign-out-button"
+import { PasswordForm } from "./password-form"
 
 export function AccountContent() {
   const query = useAccount()
@@ -38,7 +39,7 @@ export function AccountContent() {
             <div>
               <h2 className="font-bold">Personal Details</h2>
               <p className="text-xs text-muted-foreground">
-                From your verified GhanaVerse account
+                From your GhanaVerse account
               </p>
             </div>
           </div>
@@ -99,6 +100,7 @@ export function AccountContent() {
           ))}
         </div>
       </section>
+      <PasswordForm />
       <section className="mt-6 flex flex-col justify-between gap-4 rounded-xl border bg-white p-5 sm:flex-row sm:items-center">
         <div>
           <h2 className="font-bold">Session Controls</h2>

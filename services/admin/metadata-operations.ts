@@ -40,6 +40,10 @@ export async function mutateMetadata({ tx, id, child, method, raw }: Context) {
             ? { productionCompanyId: recordId }
             : { rightsHolderId: recordId },
       })
+    if (k === "rights-holders")
+      count += await tx.rightsHolderMembership.count({
+        where: { rightsHolderId: recordId },
+      })
     if (count)
       throw new PlatformError(
         409,

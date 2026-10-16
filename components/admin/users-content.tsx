@@ -1,13 +1,14 @@
 "use client"
 import { useAdminUsers } from "@/services/admin/users"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { userUpdateSchema } from "@/lib/validation/admin"
 import type { z } from "zod"
-import { useAdminMutation } from "@/services/admin/queries"
-import type { AdminUser } from "@/types/admin"
+import { useAdminMutation, useAdminResource } from "@/services/admin/queries"
+import type { AdminUser, AdminOptions, Option } from "@/types/admin"
+import { RightsHolderUserForm } from "./rights-holder-user-form"
 import {
   Heading,
   Metric,
@@ -17,11 +18,30 @@ import {
   Empty,
   FormError,
 } from "./shared"
-function UserForm({ user, close }: { user: AdminUser; close: () => void }) {
-  const form = useForm<z.infer<typeof userUpdateSchema>>({
+function UserForm({
+  user,
+  holders,
+  close,
+}: {
+  user: AdminUser
+  holders: Option[]
+  close: () => void
+}) {
+  const form = useForm<
+    z.input<typeof userUpdateSchema>,
+    unknown,
+    z.output<typeof userUpdateSchema>
+  >({
     resolver: zodResolver(userUpdateSchema),
-    defaultValues: { role: user.role, isSuspended: user.isSuspended },
+    defaultValues: {
+      role: user.role,
+      isSuspended: user.isSuspended,
+      rightsHolderIds: user.rightsHolderMemberships.map(
+        (m) => m.rightsHolderId
+      ),
+    },
   })
+  const selectedRole = useWatch({ control: form.control, name: "role" })
   const mutation = useAdminMutation()
   return (
     <form
@@ -48,8 +68,13 @@ function UserForm({ user, close }: { user: AdminUser; close: () => void }) {
       <div className="flex flex-wrap items-center gap-4">
         <label className="gv-label">
           Role
-          <select aria-label="Role" className="gv-field" {...form.register("role")}>
+          <select
+            aria-label="Role"
+            className="gv-field"
+            {...form.register("role")}
+          >
             <option>VIEWER</option>
+            <option>RIGHTS_HOLDER</option>
             <option>ADMIN</option>
           </select>
         </label>
@@ -58,6 +83,22 @@ function UserForm({ user, close }: { user: AdminUser; close: () => void }) {
           Suspend account
         </label>
       </div>
+      {selectedRole === "RIGHTS_HOLDER" ? (
+        <fieldset className="space-y-2">
+          <legend className="gv-label mb-2">Rights-holder organizations</legend>
+          {holders.map((holder) => (
+            <label key={holder.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                value={holder.id}
+                {...form.register("rightsHolderIds")}
+              />
+              {holder.name}
+            </label>
+          ))}
+          <FormError message={form.formState.errors.rightsHolderIds?.message} />
+        </fieldset>
+      ) : null}
       <FormError message={mutation.error?.message} />
       <div className="flex gap-2">
         <button className="gv-action" disabled={mutation.isPending}>
@@ -76,6 +117,8 @@ export function UsersContent() {
   const [status, setStatus] = useState("")
   const [page, setPage] = useState(1)
   const [editing, setEditing] = useState<AdminUser | null>(null)
+  const [creating, setCreating] = useState(false)
+  const options = useAdminResource<AdminOptions>("options")
   const query = useAdminUsers(
     `${new URLSearchParams({ q, role, status, page: String(page) })}`
   )
@@ -84,10 +127,36 @@ export function UsersContent() {
       <Heading
         eyebrow="Account operations & access management"
         title="Users"
-        description="Manage registered viewers and administrator access. Role and suspension changes revoke existing sessions."
+        description="Manage viewers, rights holders, and administrators. Access changes revoke existing sessions."
+      />
+      <button
+        className="gv-action mb-5"
+        onClick={() => {
+          setCreating(true)
+          setEditing(null)
+        }}
+        disabled={!options.data}
+      >
+        Create rights holder
+      </button>
+      {creating && options.data ? (
+        <RightsHolderUserForm
+          holders={options.data.rightsHolders}
+          close={() => setCreating(false)}
+        />
+      ) : null}
+      <QueryState
+        pending={false}
+        error={options.error}
+        retry={options.refetch}
       />
       {query.data ? (
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric
+            label="Rights-holder accounts"
+            value={query.data.rightsHolders}
+            icon="verified_user"
+          />
           <Metric
             label="Registered viewers"
             value={query.data.viewers}
@@ -128,6 +197,7 @@ export function UsersContent() {
           <option value="">All roles</option>
           <option>ADMIN</option>
           <option>VIEWER</option>
+          <option>RIGHTS_HOLDER</option>
         </select>
         <select
           aria-label="Account status"
@@ -147,6 +217,7 @@ export function UsersContent() {
         <UserForm
           key={editing.id}
           user={editing}
+          holders={options.data?.rightsHolders ?? []}
           close={() => setEditing(null)}
         />
       ) : null}
@@ -162,7 +233,7 @@ export function UsersContent() {
               <thead>
                 <tr>
                   {[
-                    "Viewer name",
+                    "Account name",
                     "Email address",
                     "Role",
                     "Account status",

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
+import { useAccount } from "@/services/viewer/account"
 
 const publicLinks = [
   ["Home", "/"],
@@ -22,6 +23,7 @@ export function ViewerNavigation() {
   const router = useRouter()
   const links = session ? [...publicLinks, ...memberLinks] : publicLinks
   const user = session?.user
+  const account = useAccount(Boolean(session))
   const linkClass = (href: string) =>
     cn(
       "rounded-md px-3 py-2 text-sm font-medium transition",
@@ -36,6 +38,19 @@ export function ViewerNavigation() {
   }
   const accountMenu = (
     <>
+      {account.data?.hasRightsHolderReports ? (
+        <Link
+          href="/creator/analytics"
+          className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Rights-holder reports
+        </Link>
+      ) : null}
+      {account.data?.role ? (
+        <span className="px-3 py-1 text-xs font-semibold text-primary">
+          {account.data.role.replaceAll("_", " ")}
+        </span>
+      ) : null}
       <Link
         href="/profiles"
         className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
@@ -154,9 +169,7 @@ function UserIdentity({
     <div
       className={cn(
         "min-w-0",
-        compact
-          ? "hidden w-52 text-right xl:block"
-          : "mb-1 border-b px-3 py-2"
+        compact ? "hidden w-52 text-right xl:block" : "mb-1 border-b px-3 py-2"
       )}
     >
       <p className="truncate text-sm font-bold text-foreground">{user.name}</p>

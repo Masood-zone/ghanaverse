@@ -9,6 +9,7 @@ datasource db {
 
 enum UserRole {
   VIEWER
+  RIGHTS_HOLDER
   ADMIN
 }
 
@@ -53,34 +54,38 @@ enum CreditType {
 enum VideoSourceType {
   MANAGED
   REMOTE_URL
+  YOUTUBE
   DEMO
 }
 
 model User {
-  id            String          @id
-  name          String
-  email         String          @unique
-  isSuspended Boolean @default(false)
-  emailVerified Boolean         @default(false)
-  image         String?
-  role          UserRole        @default(VIEWER)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  profiles      ViewerProfile[]
+  id                      String                   @id
+  name                    String
+  email                   String                   @unique
+  isSuspended             Boolean                  @default(false)
+  emailVerified           Boolean                  @default(false)
+  image                   String?
+  role                    UserRole                 @default(VIEWER)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  sessions                Session[]
+  accounts                Account[]
+  profiles                ViewerProfile[]
+  rightsHolderMemberships RightsHolderMembership[]
+  playbackSessions        PlaybackSession[]
 }
 
 model ViewerProfile {
-  id        String          @id @default(cuid())
-  userId    String
-  name      String
-  avatar    String?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  watchlist WatchlistItem[]
-  progress  WatchProgress[]
+  id               String            @id @default(cuid())
+  userId           String
+  name             String
+  avatar           String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  watchlist        WatchlistItem[]
+  progress         WatchProgress[]
+  playbackSessions PlaybackSession[]
 
   @@index([userId])
 }
@@ -131,6 +136,7 @@ model Content {
   watchlist            WatchlistItem[]
   progress             WatchProgress[]
   collectionItems      CollectionItem[]
+  playbackSessions     PlaybackSession[]
 
   @@unique([metadataSource, externalId])
   @@index([publicationStatus, contentType])
@@ -201,11 +207,25 @@ model ProductionCompany {
 }
 
 model RightsHolder {
-  id           String    @id @default(cuid())
-  name         String    @unique
+  id           String                   @id @default(cuid())
+  name         String                   @unique
   contactEmail String?
   notes        String?
+  phone        String?
+  address      String?
+  website      String?
   contents     Content[]
+  memberships  RightsHolderMembership[]
+}
+
+model RightsHolderMembership {
+  userId         String
+  rightsHolderId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rightsHolder   RightsHolder @relation(fields: [rightsHolderId], references: [id], onDelete: Restrict)
+
+  @@id([userId, rightsHolderId])
+  @@index([rightsHolderId])
 }
 
 model Trailer {
@@ -230,34 +250,75 @@ model Season {
 }
 
 model Episode {
-  id             String          @id @default(cuid())
-  seasonId       String
-  episodeNumber  Int
-  title          String
-  description    String?
-  runtimeMinutes Int?
-  airDate        DateTime?
-  thumbnailUrl   String?
-  season         Season          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  videoAssets    VideoAsset[]
-  progress       WatchProgress[]
+  id               String            @id @default(cuid())
+  seasonId         String
+  episodeNumber    Int
+  title            String
+  description      String?
+  runtimeMinutes   Int?
+  airDate          DateTime?
+  thumbnailUrl     String?
+  season           Season            @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  videoAssets      VideoAsset[]
+  progress         WatchProgress[]
+  playbackSessions PlaybackSession[]
 
   @@unique([seasonId, episodeNumber])
 }
 
 model VideoAsset {
-  id              String          @id @default(cuid())
-  contentId       String?
-  episodeId       String?
-  sourceType      VideoSourceType
-  playbackUrl     String
-  durationSeconds Int?
-  licenseType     MediaRights
-  isPlayable      Boolean         @default(false)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  content         Content?        @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  episode         Episode?        @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  id               String            @id @default(cuid())
+  contentId        String?
+  episodeId        String?
+  sourceType       VideoSourceType
+  playbackUrl      String
+  durationSeconds  Int?
+  licenseType      MediaRights
+  isPlayable       Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  content          Content?          @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  episode          Episode?          @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  playbackSessions PlaybackSession[]
+}
+
+model PlaybackSession {
+  id                  String           @id @default(cuid())
+  idempotencyKey      String           @unique
+  userId              String
+  profileId           String
+  videoAssetId        String
+  contentId           String
+  episodeId           String?
+  startedAt           DateTime         @default(now())
+  lastSampleAt        DateTime         @default(now())
+  lastSequence        Int              @default(0)
+  watchedMilliseconds Int              @default(0)
+  reportedMilliseconds Int             @default(0)
+  durationSeconds     Float?
+  coverage            Json             @default("[]")
+  completedAt         DateTime?
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile             ViewerProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  videoAsset          VideoAsset       @relation(fields: [videoAssetId], references: [id], onDelete: Cascade)
+  content             Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  episode             Episode?         @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  samples             PlaybackSample[]
+
+  @@index([contentId, startedAt])
+  @@index([userId, startedAt])
+  @@index([startedAt])
+}
+
+model PlaybackSample {
+  sessionId           String
+  sequence            Int
+  watchedMilliseconds Int
+  createdAt           DateTime        @default(now())
+  session             PlaybackSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, sequence])
+  @@index([createdAt])
 }
 
 model WatchlistItem {
@@ -353,23 +414,25 @@ model Verification {
 }
 
 model AuditLog {
- id String @id @default(cuid())
- actorId String
- action String
- entityType String
- entityId String
- createdAt DateTime @default(now())
- @@index([createdAt])
- @@index([entityType, entityId])
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
 }
+
 model ArtworkAsset {
- id String @id @default(cuid())
- publicId String @unique
- secureUrl String @unique
- purpose String
- width Int
- height Int
- bytes Int
- uploadedById String
- createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  publicId     String   @unique
+  secureUrl    String   @unique
+  purpose      String
+  width        Int
+  height       Int
+  bytes        Int
+  uploadedById String
+  createdAt    DateTime @default(now())
 }

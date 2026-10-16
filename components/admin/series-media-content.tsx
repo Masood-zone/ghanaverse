@@ -12,6 +12,7 @@ import {
 } from "@/lib/platform-validation"
 import { useAdminMutation } from "@/services/admin/queries"
 import { toOptionalNumber } from "@/lib/validation/form-values"
+import { minutesToSeconds } from "@/lib/playback-metrics"
 import type { EditorRecord } from "@/types/admin"
 import FileUpload from "@/components/common/FileUpload"
 import { FormError } from "./shared"
@@ -397,8 +398,8 @@ export function SeriesMediaContent({
       <section className="gv-panel">
         <h2 className="text-xl font-bold text-primary">Media & Playback</h2>
         <p className="mt-2 text-xs leading-6 text-slate-600">
-          Configure existing HTTPS playback links. Full video uploads and
-          transcoding are deferred.
+          Paste a YouTube link for automatic embedding, or a direct HTTPS
+          video-file link. YouTube playback must remain free.
         </p>
         <div className="my-4 space-y-3">
           {assets.map((asset) => (
@@ -442,7 +443,7 @@ export function SeriesMediaContent({
           )}
         >
           <label className="gv-label md:col-span-2">
-            Playback URL
+            YouTube or direct-video URL
             <input className="gv-field" {...media.register("playbackUrl")} />
             <FormError message={media.formState.errors.playbackUrl?.message} />
           </label>
@@ -454,6 +455,7 @@ export function SeriesMediaContent({
               {...media.register("sourceType")}
             >
               <option>REMOTE_URL</option>
+              <option>YOUTUBE</option>
               <option>DEMO</option>
             </select>
           </label>
@@ -496,13 +498,14 @@ export function SeriesMediaContent({
             </label>
           ) : null}
           <label className="gv-label">
-            Duration in seconds
+            Duration in minutes
             <input
               type="number"
-              min="1"
+              min="0.016666667"
+              step="any"
               className="gv-field"
               {...media.register("durationSeconds", {
-                setValueAs: toOptionalNumber,
+                setValueAs: minutesToSeconds,
               })}
             />
           </label>

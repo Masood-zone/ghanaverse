@@ -4,17 +4,21 @@ import { ContentArtwork } from "@/components/catalogue/content-artwork"
 import { ContentRow } from "@/components/catalogue/content-row"
 import { LandscapeCard } from "@/components/catalogue/landscape-card"
 import { TrailerDialog } from "@/components/catalogue/trailer-dialog"
+import { isPermittedPlaybackAsset } from "@/lib/image-policy"
 import { getHomeData } from "@/lib/viewer-data"
 
 const allowedAsset = (content: {
   isPremium: boolean
-  videoAssets: Array<{ id: string; isPlayable: boolean; sourceType: string }>
+  videoAssets: Array<{
+    id: string
+    isPlayable: boolean
+    sourceType: string
+    playbackUrl: string
+  }>
 }) =>
   content.isPremium
     ? undefined
-    : content.videoAssets.find(
-        (asset) => asset.isPlayable && asset.sourceType !== "MANAGED"
-      )
+    : content.videoAssets.find(isPermittedPlaybackAsset)
 
 export default async function Home() {
   const { content, collections, featured, viewer } = await getHomeData()
@@ -108,10 +112,9 @@ export default async function Home() {
               {viewer.progress.map((item) => {
                 const title = item.content ?? item.episode?.season.series
                 const asset =
-                  item.episode?.videoAssets.find(
-                    (entry) =>
-                      entry.isPlayable && entry.sourceType !== "MANAGED"
-                  ) ?? (title ? allowedAsset(title) : undefined)
+                  (!title?.isPremium
+                    ? item.episode?.videoAssets.find(isPermittedPlaybackAsset)
+                    : undefined) ?? (title ? allowedAsset(title) : undefined)
                 const percent = item.durationSeconds
                   ? (item.positionSeconds / item.durationSeconds) * 100
                   : 0

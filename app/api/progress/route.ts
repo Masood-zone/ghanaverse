@@ -2,14 +2,24 @@ import { PublicationStatus } from "@/app/generated/prisma/enums"
 import { apiSuccess } from "@/lib/api-response"
 import { requireUser } from "@/lib/auth/access"
 import { isPermittedPlaybackAsset } from "@/lib/image-policy"
-import { getPrisma } from "@/lib/prisma"
+import { getPrisma, sqlTable } from "@/lib/prisma"
 import { progressSchema } from "@/lib/platform-validation"
 import { requireActiveProfile } from "@/lib/profiles"
 import { PlatformError, routeError } from "@/lib/route-error"
+import { recordPlaybackSample } from "@/services/viewer/playback-operations"
 
 export async function PUT(request: Request) {
   try {
     const { user } = await requireUser()
+    if (
+      request.headers.get("origin") &&
+      request.headers.get("origin") !== new URL(request.url).origin
+    )
+      throw new PlatformError(
+        403,
+        "INVALID_ORIGIN",
+        "Request origin is not permitted."
+      )
     const profile = await requireActiveProfile(user.id)
     const input = progressSchema.parse(await request.json())
     const asset = await getPrisma().videoAsset.findUnique({
@@ -49,24 +59,40 @@ export async function PUT(request: Request) {
     const key = asset.episodeId
       ? { episodeId: asset.episodeId }
       : { contentId: asset.contentId }
-    const progress = await getPrisma().$transaction(async (tx) => {
-      const existing = await tx.watchProgress.findFirst({
-        where: { profileId: profile.id, ...key },
-        orderBy: { lastWatchedAt: "desc" },
-      })
-      const data = {
-        profileId: profile.id,
-        contentId: asset.contentId,
-        episodeId: asset.episodeId,
-        positionSeconds: input.positionSeconds,
-        durationSeconds,
-        completed,
-        lastWatchedAt: new Date(),
-      }
-      return existing
-        ? tx.watchProgress.update({ where: { id: existing.id }, data })
-        : tx.watchProgress.create({ data })
-    })
+    const progress = await getPrisma().$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM ${sqlTable("ViewerProfile")} WHERE "id" = ${profile.id} FOR UPDATE`
+        const existing = await tx.watchProgress.findFirst({
+          where: { profileId: profile.id, ...key },
+          orderBy: { lastWatchedAt: "desc" },
+        })
+        if (
+          input.telemetry &&
+          !(await recordPlaybackSample(
+            tx,
+            user.id,
+            profile.id,
+            asset.id,
+            input.telemetry,
+            durationSeconds
+          ))
+        )
+          return existing
+        const data = {
+          profileId: profile.id,
+          contentId: asset.contentId,
+          episodeId: asset.episodeId,
+          positionSeconds: input.positionSeconds,
+          durationSeconds,
+          completed,
+          lastWatchedAt: new Date(),
+        }
+        return existing
+          ? tx.watchProgress.update({ where: { id: existing.id }, data })
+          : tx.watchProgress.create({ data })
+      },
+      { maxWait: 15000, timeout: 20000 }
+    )
     return apiSuccess(progress, "Viewing progress saved.")
   } catch (error) {
     return routeError(error, "Viewing progress could not be saved.")
