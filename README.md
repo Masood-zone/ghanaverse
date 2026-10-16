@@ -39,7 +39,7 @@ pnpm test
 pnpm build
 ```
 
-`test:prepare` migrates the `ghanaverse_test` schema configured by `TEST_DATABASE_URL`. On Windows, `pnpm test:prepare --local` provisions an isolated PostgreSQL instance using the installed tools, bound to `127.0.0.1:55439`, with generated data ignored under `.test-postgres`. Later prepare runs restart it when needed. Stop it with `pnpm exec tsx scripts/test-database.ts --stop-local`. Tests refuse to run against the development `public` schema. The current `prebuild` generates Prisma and runs `db:migrate` (`prisma migrate dev`) before compiling the application. Production migrations should use `pnpm exec prisma migrate deploy` against the intended production database.
+`test:prepare` migrates the `ghanaverse_test` schema configured by `TEST_DATABASE_URL`. On Windows, `pnpm test:prepare --local` provisions an isolated PostgreSQL instance using the installed tools, bound to `127.0.0.1:55439`, with generated data ignored under `.test-postgres`. Later prepare runs restart it when needed. Stop it with `pnpm exec tsx scripts/test-database.ts --stop-local`. Tests refuse to run against the development `public` schema. The `prebuild` generates Prisma before compiling the application. Production migrations use `pnpm db:deploy` (`prisma migrate deploy`) against the intended production database; the video worker container runs this before starting.
 
 Install the browser once with `pnpm exec playwright install chromium`. `pnpm qa:browser` runs the administrator acceptance flow against a running local server, including a live Cloudinary artwork upload. It creates temporary QA records, captures desktop/mobile screenshots under `artifacts/implementation-qa`, and removes its fixture records and uploaded provider image afterward.
 
