@@ -22,6 +22,10 @@ Required: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `SEED_ADMIN_E
 
 Artwork requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. These are server-only. Without them, drafts remain usable and uploads return an explicit unavailable response. `YOUTUBE_API_KEY` is only needed for trailer search; a YouTube video ID or URL can be entered directly.
 
+Private R2 video uploads require the five `R2_*` values in `.env.example`. Follow the [R2 setup and recovery guide](docs/R2_VIDEO_SETUP.md) to configure bucket permissions, CORS, and the seven-day multipart lifecycle. Administrators use `/admin/storage`; linked rights holders manage their own titles at `/creator/content`. Prepared MP4 files upload directly to R2, with an 8 GB shared allowance including unfinished reservations. Playback URLs are issued only after authorization.
+
+`pnpm video:storage:check` verifies a tiny temporary object; `pnpm video:storage:cleanup` retries expiration and deletion cleanup. `pnpm qa:video` runs real movie and episode uploads, preview, playback, renewal, and controlled multipart recovery against a running local app and configured R2 bucket, then removes its temporary fixtures. Its MDN CC0 sample and results are saved under ignored `artifacts/implementation-qa/r2`.
+
 ## Development and checks
 
 ```powershell
@@ -33,7 +37,7 @@ pnpm test
 pnpm build
 ```
 
-`test:prepare` migrates the `ghanaverse_test` schema configured by `TEST_DATABASE_URL`. On Windows, `pnpm test:prepare --local` provisions an isolated PostgreSQL instance using the installed tools, bound to `127.0.0.1:55439`, with generated data ignored under `.test-postgres`. Later prepare runs restart it when needed. Stop it with `pnpm exec tsx scripts/test-database.ts --stop-local`. Tests refuse to run against the development `public` schema. Database migrations are explicit; `build` only generates Prisma and builds the application.
+`test:prepare` migrates the `ghanaverse_test` schema configured by `TEST_DATABASE_URL`. On Windows, `pnpm test:prepare --local` provisions an isolated PostgreSQL instance using the installed tools, bound to `127.0.0.1:55439`, with generated data ignored under `.test-postgres`. Later prepare runs restart it when needed. Stop it with `pnpm exec tsx scripts/test-database.ts --stop-local`. Tests refuse to run against the development `public` schema. The current `prebuild` generates Prisma and runs `db:migrate` (`prisma migrate dev`) before compiling the application. Production migrations should use `pnpm exec prisma migrate deploy` against the intended production database.
 
 Install the browser once with `pnpm exec playwright install chromium`. `pnpm qa:browser` runs the administrator acceptance flow against a running local server, including a live Cloudinary artwork upload. It creates temporary QA records, captures desktop/mobile screenshots under `artifacts/implementation-qa`, and removes its fixture records and uploaded provider image afterward.
 
