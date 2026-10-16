@@ -132,7 +132,7 @@ export function ProfileManager() {
           className="inline-flex items-center gap-2 rounded-md border bg-white px-6 py-3 font-bold"
         >
           <Edit3 className="h-4 w-4" />
-          {manage ? "Done Managing" : "Manage Profiles"}
+          {manage ? "Close" : "Manage Profiles"}
         </button>
       </div>
       {editing ? (
