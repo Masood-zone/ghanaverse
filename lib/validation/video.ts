@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { videoExtension } from "@/lib/video/constants"
 export const videoMetadataSchema = z
   .object({
     durationSeconds: z.number().positive().max(86400),
@@ -18,7 +19,10 @@ export const createVideoUploadSchema = z
       .string()
       .min(1)
       .max(255)
-      .regex(/\.mp4$/i),
+      .refine(
+        (name) => videoExtension(name) !== null,
+        "Choose a supported video file."
+      ),
     fileSize: z.number().int().positive().max(8_000_000_000),
     lastModified: z.number().nonnegative(),
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
@@ -28,7 +32,7 @@ export const createVideoUploadSchema = z
       "CREATIVE_COMMONS",
       "PUBLIC_DOMAIN",
     ]),
-    mediaMetadata: videoMetadataSchema,
+    mediaMetadata: videoMetadataSchema.nullable().default(null),
   })
   .strict()
 export const signVideoPartSchema = z

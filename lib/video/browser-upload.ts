@@ -2,7 +2,12 @@
 import axios from "axios"
 import type { VideoUploadSummary } from "@/services/video/uploads"
 import type { VideoMetadata } from "@/lib/validation/video"
-import { VIDEO_PART_BYTES, VIDEO_HEADER_BYTES, partBytes } from "./constants"
+import {
+  VIDEO_PART_BYTES,
+  VIDEO_HEADER_BYTES,
+  partBytes,
+  videoExtension,
+} from "./constants"
 import { VideoRequestError, videoRequest } from "./client-api"
 
 type Destination = {
@@ -20,6 +25,7 @@ export type UploadView = VideoUploadSummary & {
     | "paused"
     | "failed"
     | "complete"
+    | "processing"
   confirmedBytes: number
   transferredBytes: number
   bytesPerSecond: number
@@ -131,23 +137,39 @@ export async function recoverUploads() {
         ...views,
         {
           ...session,
-          state: "needs-file",
-          confirmedBytes: 0,
-          transferredBytes: 0,
+          state: ["PROCESSING", "CANCELLING"].includes(session.status)
+            ? "processing"
+            : session.status === "PROCESSING_FAILED"
+              ? "failed"
+              : "needs-file",
+          confirmedBytes: session.status.startsWith("PROCESSING")
+            ? session.fileSize
+            : 0,
+          transferredBytes: session.status.startsWith("PROCESSING")
+            ? session.fileSize
+            : 0,
           bytesPerSecond: 0,
-          error: null,
+          error:
+            session.status === "PROCESSING_FAILED" ? session.lastError : null,
         },
       ]
   }
   emit()
 }
 export async function queueVideo(file: File, destination: Destination) {
-  if (!/\.mp4$/i.test(file.name) || !file.size)
-    throw new Error("Choose a prepared MP4 file.")
-  const { inspectMp4Header } = await import("./inspect-mp4")
-  const mediaMetadata: VideoMetadata = inspectMp4Header(
-    await file.slice(0, VIDEO_HEADER_BYTES).arrayBuffer()
-  )
+  if (!videoExtension(file.name) || !file.size || file.size > 8_000_000_000)
+    throw new Error("Choose a supported video file up to 8 GB.")
+  let mediaMetadata: VideoMetadata | null = null
+  if (/\.(mp4|m4v)$/i.test(file.name)) {
+    const { inspectMp4Header } = await import("./inspect-mp4")
+    try {
+      mediaMetadata = inspectMp4Header(
+        await file.slice(0, VIDEO_HEADER_BYTES).arrayBuffer()
+      )
+    } catch {
+      /* The worker inspects complete files and prepares other containers/codecs. */
+    }
+  }
   const identity = await fingerprint(file)
   // Persist the idempotency key before a request whose response can be lost.
   const key = `ghanaverse.video.v1:${destination.contentId}:${destination.episodeId ?? "movie"}:${identity}`
@@ -192,11 +214,22 @@ export async function queueVideo(file: File, destination: Destination) {
     ...views.filter((v) => v.id !== session.id),
     {
       ...session,
-      state: session.status === "COMPLETED" ? "complete" : "queued",
-      confirmedBytes: session.status === "COMPLETED" ? session.fileSize : 0,
+      state:
+        session.status === "COMPLETED"
+          ? "complete"
+          : ["PROCESSING", "CANCELLING"].includes(session.status)
+            ? "processing"
+            : session.status === "PROCESSING_FAILED"
+              ? "failed"
+              : "queued",
+      confirmedBytes:
+        session.status === "COMPLETED" ||
+        session.status.startsWith("PROCESSING")
+          ? session.fileSize
+          : 0,
       transferredBytes: 0,
       bytesPerSecond: 0,
-      error: null,
+      error: session.status === "PROCESSING_FAILED" ? session.lastError : null,
     },
   ]
   emit()
@@ -205,6 +238,15 @@ export async function queueVideo(file: File, destination: Destination) {
 export async function resumeVideo(id: string, selected?: File) {
   const view = views.find((v) => v.id === id)
   if (!view) return
+  if (["PROCESSING_FAILED", "PROCESSING", "COMPLETING"].includes(view.status)) {
+    const result = await videoRequest<VideoUploadSummary>(
+      `video-uploads/${id}/complete`,
+      "POST",
+      {}
+    )
+    acceptCompletion(view, result)
+    return
+  }
   const file = selected ?? files.get(id)
   if (!file) throw new Error("Reselect the original file to resume.")
   update(id, { state: "checking", error: null })
@@ -249,6 +291,10 @@ export async function cancelVideo(id: string) {
       files.delete(id)
       return
     }
+    if (result.status === "CANCELLING") {
+      update(id, { status: result.status, state: "processing", error: null })
+      return
+    }
     try {
       const saved = JSON.parse(
         localStorage.getItem(`ghanaverse.video.session.v1:${id}`) ?? "null"
@@ -264,7 +310,11 @@ export async function cancelVideo(id: string) {
     emit()
   } catch (error) {
     update(id, {
-      state: "failed",
+      state: views.some(
+        (v) => v.id === id && ["PROCESSING", "CANCELLING"].includes(v.status)
+      )
+        ? "processing"
+        : "failed",
       error:
         error instanceof Error
           ? error.message
@@ -333,8 +383,12 @@ async function run(view: UploadView, file: File, controller: AbortController) {
       abortCheck(signal)
       update(view.id, { state: "checking", error: null })
       if (view.status === "COMPLETING") {
-        await videoRequest(`video-uploads/${view.id}/complete`, "POST", {})
-        finish(view)
+        const result = await videoRequest<VideoUploadSummary>(
+          `video-uploads/${view.id}/complete`,
+          "POST",
+          {}
+        )
+        acceptCompletion(view, result)
         return
       }
       const state = await videoRequest<
@@ -465,9 +519,65 @@ async function run(view: UploadView, file: File, controller: AbortController) {
       if (failed) throw failed.reason
       abortCheck(signal)
       update(view.id, { status: "COMPLETING", state: "checking" })
-      await videoRequest(`video-uploads/${view.id}/complete`, "POST", {})
-      finish(view)
+      const result = await videoRequest<VideoUploadSummary>(
+        `video-uploads/${view.id}/complete`,
+        "POST",
+        {}
+      )
+      acceptCompletion(view, result)
     }
+  )
+}
+function acceptCompletion(view: UploadView, result: VideoUploadSummary) {
+  if (result.status === "COMPLETED") finish(view)
+  else {
+    update(view.id, {
+      status: result.status,
+      state: "processing",
+      confirmedBytes: view.fileSize,
+      transferredBytes: view.fileSize,
+      bytesPerSecond: 0,
+      error: null,
+    })
+    files.delete(view.id)
+  }
+}
+export async function refreshProcessingUploads(signal?: AbortSignal) {
+  await Promise.all(
+    views
+      .filter((view) => view.state === "processing")
+      .map(async (view) => {
+        try {
+          const result = await videoRequest<VideoUploadSummary>(
+            `video-uploads/${view.id}`,
+            "GET",
+            undefined,
+            signal
+          )
+          if (!views.some((v) => v.id === view.id)) return
+          if (result.status === "COMPLETED") finish(view)
+          else if (result.status === "CANCELLED") {
+            views = views.filter((v) => v.id !== view.id)
+            files.delete(view.id)
+            emit()
+          } else if (result.status === "PROCESSING_FAILED")
+            update(view.id, {
+              status: result.status,
+              state: "failed",
+              error:
+                result.lastError ?? "Preparation failed. Retry processing.",
+            })
+          else update(view.id, { status: result.status, error: null })
+        } catch (error) {
+          if (signal?.aborted) return
+          update(view.id, {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Could not check preparation status.",
+          })
+        }
+      })
   )
 }
 function finish(view: UploadView) {

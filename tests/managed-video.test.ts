@@ -8,7 +8,18 @@ import {
   vi,
 } from "vitest"
 import { createHash, randomUUID } from "node:crypto"
-vi.mock("@/lib/video/inspect-mp4", () => ({ inspectMp4Header: () => metadata }))
+vi.mock("@/lib/video/inspect-mp4", () => ({
+  inspectMp4Header: vi.fn(() => metadata),
+}))
+vi.mock("@/lib/video/process-media", () => ({ prepareVideo: vi.fn() }))
+import { inspectMp4Header } from "@/lib/video/inspect-mp4"
+import { prepareVideo } from "@/lib/video/process-media"
+import {
+  heartbeatVideoProcessor,
+  processNextVideo,
+} from "@/services/video/processing"
+import { videoContentType } from "@/lib/video/constants"
+import { PlatformError } from "@/lib/platform-error"
 import { getPrisma } from "@/lib/prisma"
 import { r2 } from "@/lib/r2/provider"
 import {
@@ -80,7 +91,7 @@ const complete = vi
     })
     objects.set(s.objectKey, {
       bytes: Number(session.fileSize),
-      contentType: "video/mp4",
+      contentType: videoContentType(s.objectKey)!,
       sessionId: session.id,
       etag: `"${createHash("md5")
         .update(
@@ -92,6 +103,17 @@ const complete = vi
     })
   })
 const abort = vi.spyOn(r2, "abort").mockResolvedValue()
+vi.spyOn(r2, "download").mockResolvedValue()
+vi.spyOn(r2, "uploadPrepared").mockImplementation(
+  async (target, id, _path, bytes) => {
+    objects.set(target.objectKey, {
+      bytes,
+      etag: "prepared-etag",
+      contentType: videoContentType(target.objectKey)!,
+      sessionId: id,
+    })
+  }
+)
 const remove = vi.spyOn(r2, "delete").mockImplementation(async (s) => {
   objects.delete(s.objectKey)
 })
@@ -139,10 +161,16 @@ function input(contentId: string, fileSize = 100) {
     mediaMetadata: metadata,
   }
 }
-async function uploaded(contentId: string, episodeId: string | null = null) {
+async function uploaded(
+  contentId: string,
+  episodeId: string | null = null,
+  filename = "test.mp4"
+) {
   const session = await createVideoUpload(owner, {
     ...input(contentId),
     episodeId,
+    filename,
+    mediaMetadata: filename.endsWith(".mp4") ? metadata : null,
   })
   await signVideoPart(owner, session.id, { partNumber: 1, md5: digest })
   const stored = await db.videoUploadSession.findUniqueOrThrow({
@@ -237,6 +265,7 @@ afterAll(async () => {
     where: { sessionId: { in: ids } },
   })
   await db.videoUploadSession.deleteMany({ where: { id: { in: ids } } })
+  await db.videoProcessorHeartbeat.deleteMany()
   await db.auditLog.deleteMany({
     where: { actorId: { in: [owner, other, admin, viewer] } },
   })
@@ -313,6 +342,216 @@ describe("owner workspace authorization", () => {
   })
 })
 describe("durable multipart video workflow", () => {
+  it("fails before reserving unsupported-layout videos when the processor is offline", async () => {
+    await db.videoProcessorHeartbeat.deleteMany()
+    await expect(
+      createVideoUpload(owner, {
+        ...input((await title()).id),
+        filename: "camera.mov",
+        mediaMetadata: null,
+      })
+    ).rejects.toMatchObject({ code: "VIDEO_PROCESSOR_OFFLINE" })
+  })
+  it("queues ordinary MP4s with end metadata, then attaches their prepared output and cleans the source", async () => {
+    await heartbeatVideoProcessor()
+    const session = await uploaded((await title()).id)
+    vi.mocked(inspectMp4Header).mockImplementationOnce(() => {
+      throw new Error("metadata-at-end")
+    })
+    expect((await completeVideoUpload(owner, session.id)).status).toBe(
+      "PROCESSING"
+    )
+    const current = await db.videoUploadSession.findUniqueOrThrow({
+      where: { id: session.id },
+    })
+    await db.videoUploadSession.update({
+      where: { id: session.id },
+      data: { leaseToken: "worker", leaseUntil: new Date(Date.now() + 60000) },
+    })
+    expect((await reconcileVideoUpload(owner, session.id)).status).toBe(
+      "PROCESSING"
+    )
+    await db.videoUploadSession.update({
+      where: { id: session.id },
+      data: { leaseToken: null, leaseUntil: null },
+    })
+    vi.mocked(prepareVideo).mockResolvedValueOnce({
+      path: "prepared.mp4",
+      bytes: 80,
+      extension: "mp4",
+      remuxed: true,
+      metadata: {
+        durationSeconds: 12,
+        width: 320,
+        height: 180,
+        videoCodec: "h264",
+        audioCodecs: ["aac"],
+        progressive: true,
+        contentType: "video/mp4",
+      },
+    })
+    expect((await processNextVideo())?.status).toBe("COMPLETED")
+    expect(objects.has(current.objectKey)).toBe(false)
+    const stored = await db.storedVideoObject.findUniqueOrThrow({
+      where: { sessionId: session.id },
+    })
+    expect(stored).toMatchObject({
+      state: "READY",
+      bytes: BigInt(80),
+      objectKey: `ghanaverse/video/${session.id}.playback.mp4`,
+    })
+    expect(
+      (
+        await db.videoStorageReservation.findUniqueOrThrow({
+          where: { sessionId: session.id },
+        })
+      ).releasedAt
+    ).not.toBeNull()
+  })
+  it("preserves WebM playback and retries processing failures without re-uploading", async () => {
+    await heartbeatVideoProcessor()
+    const session = await uploaded((await title()).id, null, "recording.webm")
+    expect((await completeVideoUpload(owner, session.id)).status).toBe(
+      "PROCESSING"
+    )
+    vi.mocked(prepareVideo).mockRejectedValueOnce(
+      new PlatformError(422, "INVALID_VIDEO", "Unreadable video.")
+    )
+    expect((await processNextVideo())?.status).toBe("PROCESSING_FAILED")
+    expect((await reconcileVideoUpload(owner, session.id)).lastError).toBe(
+      "Unreadable video."
+    )
+    expect((await completeVideoUpload(owner, session.id)).status).toBe(
+      "PROCESSING"
+    )
+    vi.mocked(prepareVideo).mockResolvedValueOnce({
+      path: "prepared.webm",
+      bytes: 90,
+      extension: "webm",
+      remuxed: true,
+      metadata: {
+        durationSeconds: 12,
+        width: 320,
+        height: 180,
+        videoCodec: "vp9",
+        audioCodecs: ["opus"],
+        progressive: true,
+        contentType: "video/webm",
+      },
+    })
+    expect((await processNextVideo())?.status).toBe("COMPLETED")
+    expect(
+      (
+        await db.storedVideoObject.findUniqueOrThrow({
+          where: { sessionId: session.id },
+        })
+      ).metadata
+    ).toMatchObject({ videoCodec: "vp9", contentType: "video/webm" })
+  })
+  it("rejects preparation output that exceeds the remaining shared quota", async () => {
+    await heartbeatVideoProcessor()
+    const session = await uploaded((await title()).id, null, "camera.mov")
+    await completeVideoUpload(owner, session.id)
+    const baseline = await storageUsage()
+    vi.stubEnv(
+      "R2_STORAGE_BUDGET_BYTES",
+      String(
+        baseline.stored + baseline.reserved + baseline.pendingCleanup + 2000
+      )
+    )
+    vi.mocked(prepareVideo).mockResolvedValueOnce({
+      path: "too-large.mp4",
+      bytes: 3000,
+      extension: "mp4",
+      remuxed: false,
+      metadata: {
+        durationSeconds: 12,
+        width: 320,
+        height: 180,
+        videoCodec: "h264",
+        audioCodecs: ["aac"],
+        progressive: true,
+        contentType: "video/mp4",
+      },
+    })
+    expect((await processNextVideo())?.status).toBe("PROCESSING_FAILED")
+    expect(
+      (
+        await db.videoUploadSession.findUniqueOrThrow({
+          where: { id: session.id },
+        })
+      ).processingObjectKey
+    ).toBeNull()
+    expect(
+      (
+        await db.videoStorageReservation.findUniqueOrThrow({
+          where: { sessionId: session.id },
+        })
+      ).bytes
+    ).toBe(BigInt(100))
+    await cancelVideoUpload(owner, session.id)
+  })
+  it("keeps processing output counted until source cleanup is confirmed", async () => {
+    await heartbeatVideoProcessor()
+    const session = await uploaded((await title()).id, null, "camera.mov")
+    await completeVideoUpload(owner, session.id)
+    vi.mocked(prepareVideo).mockResolvedValueOnce({
+      path: "prepared.mp4",
+      bytes: 75,
+      extension: "mp4",
+      remuxed: true,
+      metadata: {
+        durationSeconds: 12,
+        width: 320,
+        height: 180,
+        videoCodec: "h264",
+        audioCodecs: [],
+        progressive: true,
+        contentType: "video/mp4",
+      },
+    })
+    remove.mockRejectedValueOnce(new Error("cleanup temporarily offline"))
+    await processNextVideo()
+    expect(
+      await db.videoStorageReservation.findUniqueOrThrow({
+        where: { sessionId: session.id },
+      })
+    ).toMatchObject({ bytes: BigInt(100), releasedAt: null })
+    await cleanupVideoStorage()
+    expect(
+      (
+        await db.videoStorageReservation.findUniqueOrThrow({
+          where: { sessionId: session.id },
+        })
+      ).releasedAt
+    ).not.toBeNull()
+  })
+  it("defers cancellation until the worker releases its lease, then removes both objects", async () => {
+    await heartbeatVideoProcessor()
+    const session = await uploaded((await title()).id, null, "clip.mkv")
+    await completeVideoUpload(owner, session.id)
+    await db.videoUploadSession.update({
+      where: { id: session.id },
+      data: {
+        leaseToken: "worker",
+        leaseUntil: new Date(Date.now() + 60000),
+        processingObjectKey: `ghanaverse/video/${session.id}.playback.mp4`,
+      },
+    })
+    expect((await cancelVideoUpload(owner, session.id)).status).toBe(
+      "CANCELLING"
+    )
+    await db.videoUploadSession.update({
+      where: { id: session.id },
+      data: { leaseToken: null, leaseUntil: null },
+    })
+    expect((await processNextVideo())?.status).toBe("CANCELLED")
+    expect(remove).toHaveBeenCalledWith(
+      expect.objectContaining({
+        objectKey: `ghanaverse/video/${session.id}.playback.mp4`,
+      })
+    )
+  })
   it("reserves space idempotently and signs only bounded matching parts", async () => {
     const record = await title(),
       request = input(record.id)

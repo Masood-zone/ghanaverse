@@ -29,10 +29,12 @@
     "video:storage:check": "node --conditions=react-server --import tsx scripts/video-storage.ts check",
     "video:storage:status": "node --conditions=react-server --import tsx scripts/video-storage.ts status",
     "video:storage:cleanup": "node --conditions=react-server --import tsx scripts/video-storage.ts cleanup",
-    "qa:video": "tsx scripts/video-browser-qa.ts"
+    "qa:video": "tsx scripts/video-browser-qa.ts",
+    "video:worker": "node --conditions=react-server --import tsx scripts/video-worker.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/lib-storage": "^3.1152.0",
     "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "@better-auth/prisma-adapter": "^1.7.4",
     "@hookform/resolvers": "^5.9.1",

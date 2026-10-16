@@ -15,9 +15,10 @@ import {
   dismissVideo,
   setUploadIdentity,
   uploadsBelongTo,
+  refreshProcessingUploads,
 } from "@/lib/video/browser-upload"
 import { authClient } from "@/lib/auth-client"
-import { formatBytes } from "@/lib/video/constants"
+import { formatBytes, VIDEO_UPLOAD_ACCEPT } from "@/lib/video/constants"
 
 export default function UploadDrawer() {
   const uploads = useSyncExternalStore(
@@ -30,6 +31,21 @@ export default function UploadDrawer() {
     path = usePathname()
   const session = authClient.useSession(),
     userId = session.data?.user.id
+  const preparing = uploads.some((item) => item.state === "processing")
+  useEffect(() => {
+    if (!preparing || !userId) return
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>
+    async function refresh() {
+      await refreshProcessingUploads(controller.signal)
+      if (!controller.signal.aborted) timer = setTimeout(refresh, 5000)
+    }
+    void refresh()
+    return () => {
+      controller.abort()
+      clearTimeout(timer)
+    }
+  }, [preparing, userId])
   useEffect(() => {
     if (session.isPending) return
     setUploadIdentity(userId ?? null)
@@ -80,7 +96,9 @@ export default function UploadDrawer() {
         <div className="max-h-[65vh] space-y-4 overflow-y-auto p-4">
           <p className="text-xs text-slate-600">
             Keep this browser open to upload. You can resume confirmed parts for
-            up to seven days after reselecting the original file.
+            up to seven days after reselecting the original file. Preparation
+            continues on the server after upload; you can close this page while
+            it runs.
           </p>
           {uploads.map((item) => (
             <section className="space-y-2 rounded-lg border p-3" key={item.id}>
@@ -94,9 +112,13 @@ export default function UploadDrawer() {
               <p role="status" className="text-xs font-semibold">
                 {item.state === "needs-file"
                   ? "Reselect the original file"
-                  : item.state === "checking"
-                    ? "Checking and confirming video…"
-                    : item.state.replaceAll("-", " ")}
+                  : item.state === "processing"
+                    ? item.status === "CANCELLING"
+                      ? "Cancelling video…"
+                      : "Upload finished · preparing playback…"
+                    : item.state === "checking"
+                      ? "Checking and confirming video…"
+                      : item.state.replaceAll("-", " ")}
               </p>
               <progress
                 aria-label={`Confirmed upload progress for ${item.filename}`}
@@ -130,7 +152,8 @@ export default function UploadDrawer() {
                   >
                     Pause
                   </button>
-                ) : item.state === "complete" ? (
+                ) : item.state === "processing" ? null : item.state ===
+                  "complete" ? (
                   <button onClick={() => dismissVideo(item.id)}>Dismiss</button>
                 ) : (
                   <>
@@ -143,26 +166,28 @@ export default function UploadDrawer() {
                     >
                       {item.state === "failed" ? "Retry" : "Resume"}
                     </button>
-                    <label className="cursor-pointer text-amber-900 underline">
-                      Reselect MP4
-                      <input
-                        aria-label={`Reselect ${item.filename}`}
-                        className="sr-only"
-                        type="file"
-                        accept="video/mp4,.mp4"
-                        onChange={(e) => {
-                          const file = e.currentTarget.files?.[0]
-                          if (file)
-                            void resumeVideo(item.id, file).catch(
-                              (error: Error) => toast.error(error.message)
-                            )
-                          e.currentTarget.value = ""
-                        }}
-                      />
-                    </label>
+                    {item.status !== "PROCESSING_FAILED" ? (
+                      <label className="cursor-pointer text-amber-900 underline">
+                        Reselect video
+                        <input
+                          aria-label={`Reselect ${item.filename}`}
+                          className="sr-only"
+                          type="file"
+                          accept={VIDEO_UPLOAD_ACCEPT}
+                          onChange={(e) => {
+                            const file = e.currentTarget.files?.[0]
+                            if (file)
+                              void resumeVideo(item.id, file).catch(
+                                (error: Error) => toast.error(error.message)
+                              )
+                            e.currentTarget.value = ""
+                          }}
+                        />
+                      </label>
+                    ) : null}
                   </>
                 )}
-                {item.state !== "complete" ? (
+                {item.state !== "complete" && item.status !== "CANCELLING" ? (
                   <button
                     className="text-red-700"
                     onClick={() => {

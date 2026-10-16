@@ -1,7 +1,7 @@
 "use client"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
-import { VIDEO_PREPARATION } from "@/lib/video/constants"
+import { VIDEO_UPLOAD_ACCEPT, VIDEO_UPLOAD_HELP } from "@/lib/video/constants"
 export function VideoUploadButton({
   contentId,
   episodeId = null,
@@ -32,14 +32,14 @@ export function VideoUploadButton({
         disabled={disabled || busy || !allowed}
         onClick={() => input.current?.click()}
       >
-        {busy ? "Checking MP4…" : "Upload Video"}
+        {busy ? "Checking video…" : "Upload Video"}
       </button>
       <input
         ref={input}
         className="sr-only"
         aria-label={`Upload video to ${label}`}
         type="file"
-        accept="video/mp4,.mp4"
+        accept={VIDEO_UPLOAD_ACCEPT}
         disabled={disabled || busy || !allowed}
         onChange={async (event) => {
           const file = event.currentTarget.files?.[0]
@@ -73,7 +73,7 @@ export function VideoUploadButton({
       ) : null}
       {!compact ? (
         <p className="max-w-xl text-xs text-slate-600">
-          {VIDEO_PREPARATION} Maximum shared application storage: 8 GB,
+          {VIDEO_UPLOAD_HELP} Maximum shared application storage: 8 GB,
           including unfinished uploads.
         </p>
       ) : null}

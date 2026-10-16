@@ -460,6 +460,9 @@ model VideoUploadSession {
   endpoint        String
   bucket          String
   objectKey       String   @unique
+  processingObjectKey String?
+  processingBytes BigInt?
+  sourceDeleted   Boolean  @default(false)
   providerUploadId String?
   status          String   @default("INITIALIZING")
   expiresAt       DateTime
@@ -475,6 +478,7 @@ model VideoUploadSession {
 
   @@index([contentId, status])
   @@index([expiresAt, status])
+  @@index([status, leaseUntil, createdAt])
 }
 
 model VideoUploadPart {
@@ -483,6 +487,11 @@ model VideoUploadPart {
   md5       String
   session   VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   @@id([sessionId, partNumber])
+}
+
+model VideoProcessorHeartbeat {
+  id String @id
+  seenAt DateTime
 }
 
 model VideoStorageReservation {

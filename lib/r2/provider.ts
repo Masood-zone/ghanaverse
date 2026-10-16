@@ -1,5 +1,10 @@
 import "server-only"
 import { randomUUID } from "node:crypto"
+import { createReadStream, createWriteStream } from "node:fs"
+import { Transform, Readable } from "node:stream"
+import { pipeline } from "node:stream/promises"
+import { Upload } from "@aws-sdk/lib-storage"
+import { videoContentType, VIDEO_PART_BYTES } from "@/lib/video/constants"
 import {
   S3Client,
   CreateMultipartUploadCommand,
@@ -66,7 +71,7 @@ export function r2Identity() {
     bucket: process.env.R2_BUCKET_NAME!,
   }
 }
-function provider(identity?: { endpoint: string; bucket: string }) {
+function provider(identity?: { endpoint: string; bucket: string }, requestTimeout = 60000) {
   const configured = r2Identity()
   if (
     identity &&
@@ -88,7 +93,7 @@ function provider(identity?: { endpoint: string; bucket: string }) {
     requestChecksumCalculation: "WHEN_REQUIRED",
     responseChecksumValidation: "WHEN_REQUIRED",
     maxAttempts: 3,
-    requestHandler: { requestTimeout: 60000, connectionTimeout: 10000 },
+    requestHandler: { requestTimeout, connectionTimeout: 10000 },
   })
   return { client, Bucket: configured.bucket }
 }
@@ -120,7 +125,8 @@ export const r2 = {
       new CreateMultipartUploadCommand({
         Bucket,
         Key: target.objectKey,
-        ContentType: "video/mp4",
+        ContentType:
+          videoContentType(target.objectKey) ?? "application/octet-stream",
         CacheControl: "private, max-age=0",
         Metadata: { "ghanaverse-session": sessionId },
       })
@@ -228,6 +234,66 @@ export const r2 = {
     )
     if (!result.Body) throw new Error("R2_READ_FAILED")
     return (await result.Body.transformToByteArray()).slice().buffer
+  },
+  async download(
+    target: Target,
+    path: string,
+    expectedBytes: number,
+    signal: AbortSignal
+  ) {
+    const { client, Bucket } = provider(target, 6 * 60 * 60 * 1000)
+    const result = await client.send(
+      new GetObjectCommand({ Bucket, Key: target.objectKey }),
+      { abortSignal: signal }
+    )
+    if (!result.Body) throw new Error("R2_READ_FAILED")
+    let bytes = 0
+    const limit = new Transform({
+      transform(chunk: Buffer, _encoding, callback) {
+        bytes += chunk.length
+        callback(
+          bytes > expectedBytes ? new Error("R2_SIZE_MISMATCH") : null,
+          chunk
+        )
+      },
+    })
+    if (!(result.Body instanceof Readable)) throw new Error("R2_READ_FAILED")
+    await pipeline(result.Body, limit, createWriteStream(path), { signal })
+    if (bytes !== expectedBytes) throw new Error("R2_SIZE_MISMATCH")
+  },
+  async uploadPrepared(
+    target: Target,
+    sessionId: string,
+    path: string,
+    bytes: number,
+    signal: AbortSignal
+  ) {
+    const { client, Bucket } = provider(target)
+    const upload = new Upload({
+      client,
+      queueSize: 2,
+      partSize: VIDEO_PART_BYTES,
+      leavePartsOnError: false,
+      params: {
+        Bucket,
+        Key: target.objectKey,
+        Body: createReadStream(path),
+        ContentLength: bytes,
+        ContentType: videoContentType(target.objectKey)!,
+        CacheControl: "private, max-age=0",
+        Metadata: { "ghanaverse-session": sessionId },
+      },
+    })
+    const abort = () => {
+      void upload.abort()
+    }
+    signal.addEventListener("abort", abort, { once: true })
+    try {
+      signal.throwIfAborted()
+      await upload.done()
+    } finally {
+      signal.removeEventListener("abort", abort)
+    }
   },
   async abort(target: Target & { providerUploadId: string | null }) {
     const { client, Bucket } = provider(target)
