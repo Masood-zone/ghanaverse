@@ -48,7 +48,7 @@ Install current FFmpeg and FFprobe executables on the worker machine. Put both o
 pnpm video:worker
 ```
 
-Keep this process running under your process supervisor or deploy `Dockerfile.video-worker` as a persistent worker/container. It handles one video at a time, renews its database lease while processing, publishes a heartbeat every 15 seconds, and checks for pending jobs every five seconds. Additional workers claim separate jobs. A stale heartbeat prevents new uploads that require processing, with an offline message. Prepared fast-start H.264/AAC MP4 files can still complete without a worker.
+Keep this process running under your process supervisor or deploy `Dockerfile` as a persistent worker/container. It handles one video at a time, renews its database lease while processing, publishes a heartbeat every 15 seconds, and checks for pending jobs every five seconds. Additional workers claim separate jobs. A stale heartbeat prevents new uploads that require processing, with an offline message. Prepared fast-start H.264/AAC MP4 files can still complete without a worker.
 
 The worker uses a unique temporary directory for each attempt and removes it afterward. `VIDEO_PROCESSING_TEMP_DIR` optionally selects an existing writable directory. Allow disk space for input, prepared output and headroom. Each conversion has a six-hour limit; sources can be up to 24 hours and 8192 pixels per dimension. Restarted workers recover queued jobs and jobs whose ten-minute lease expired. Failed preparation retains the original and supports Retry without re-uploading. Cancellation interrupts processing and removes both objects after the worker releases its lease.
 
@@ -82,6 +82,16 @@ Cleanup retries expired/cancelling sessions, removes detached application-owned 
 Provider calls run outside database transactions. Durable intents and ten-minute operation leases allow a retry after a server crash; a busy response means wait for the operation or its lease to expire. Do not change bucket identity while uploads or stored objects still reference it.
 
 ## 7. Production and acceptance
+
+### Vercel production
+
+`vercel.json` declares one `video-worker` daemon in `iad1`, alongside the normal Next.js deployment. Vercel Daemons are in public beta and run only in production. The Vercel project Root Directory must be the repository root. Keep the website Build Command as `pnpm build`; the daemon is built separately from `Dockerfile` and receives the production environment variables. FFmpeg and FFprobe are installed in the image. Keep their optional path overrides unset on Vercel, and use `/tmp` for `VIDEO_PROCESSING_TEMP_DIR` if set.
+
+The container applies committed migrations with `pnpm db:deploy` before starting the worker; a migration failure prevents it from starting. It retains development dependencies because the worker executes TypeScript through `tsx` and uses the Prisma migration CLI. `.dockerignore` excludes private environment files and local build/QA data from the container build context.
+
+Push the reviewed commit to the linked production branch, then confirm the production deployment is ready and its logs show `Video worker ready`. Retry a small upload, preview it, and check seeking before larger uploads. Ensure the container has enough temporary disk for both source and output. Monitor daemon CPU usage, memory and disk; the 8 GB application bucket quota does not guarantee equivalent worker disk capacity. Production deployments restart the daemon, and interrupted jobs can be retried.
+
+References: [Vercel Daemons](https://vercel.com/docs/daemons), [configuration](https://vercel.com/docs/daemons/config-reference), [limits and quotas](https://vercel.com/docs/daemons/limits).
 
 Add the same five private variables to the production web and worker environment settings, apply migrations once, redeploy both, and run the connection check there. Confirm the worker logs its ready message before testing broader-format uploads. Add the production origin to bucket CORS. Never prefix R2 credentials with `NEXT_PUBLIC_`. Run the worker separately from HTTP request handlers; conversions are durable background jobs.
 

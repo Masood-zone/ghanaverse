@@ -1,0 +1,11 @@
+.git
+.vercel
+.env
+.env.*
+node_modules
+.next
+app/generated
+artifacts
+.test-postgres
+.backups
+coverage
