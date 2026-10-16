@@ -30,11 +30,25 @@ type StorageData = {
     asset: { id: string } | null
   }[]
 }
+type StorageActionResult =
+  | {
+      kind: "diagnostics"
+      checks: { label: string; passed: boolean }[]
+      browserCors: string
+    }
+  | {
+      kind: "cleanup"
+      expired: number
+      cancelled: number
+      attempted: number
+      deleted: number
+    }
+
 export function StorageContent() {
   const query = useAdminResource<StorageData>("storage")
   const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("")
-  async function action(path: string) {
+    [message, setMessage] = useState<StorageActionResult | string>("")
+  async function action(path: "diagnostics" | "cleanup") {
     setBusy(true)
     setMessage("")
     try {
@@ -43,7 +57,29 @@ export function StorageContent() {
         "POST",
         {}
       )
-      setMessage(JSON.stringify(result))
+      if (path === "diagnostics") {
+        setMessage({
+          kind: "diagnostics",
+          checks: [
+            { label: "Save a test file", passed: result.write === true },
+            { label: "Read the test file", passed: result.read === true },
+            { label: "Stream part of the file", passed: result.rangeRead === true },
+            { label: "Remove the test file", passed: result.delete === true },
+          ],
+          browserCors:
+            typeof result.browserCors === "string"
+              ? result.browserCors
+              : "not checked",
+        })
+      } else {
+        setMessage({
+          kind: "cleanup",
+          expired: typeof result.expired === "number" ? result.expired : 0,
+          cancelled: typeof result.cancelled === "number" ? result.cancelled : 0,
+          attempted: typeof result.attempted === "number" ? result.attempted : 0,
+          deleted: typeof result.deleted === "number" ? result.deleted : 0,
+        })
+      }
       await query.refetch()
     } catch (error) {
       setMessage(
@@ -123,9 +159,38 @@ export function StorageContent() {
             </button>
           </div>
           {message ? (
-            <p role="status" className="gv-panel mb-6 text-sm break-words">
-              {message}
-            </p>
+            typeof message === "string" ? (
+              <p role="status" className="gv-panel mb-6 text-sm break-words">
+                {message}
+              </p>
+            ) : message.kind === "diagnostics" ? (
+              <section role="status" aria-live="polite" className="gv-panel mb-6">
+                <h2 className="font-bold">Connection check results</h2>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {message.checks.map((check) => (
+                    <li key={check.label}>
+                      <span aria-hidden="true">{check.passed ? "✓" : "✗"}</span>{" "}
+                      {check.label}: {check.passed ? "Passed" : "Not confirmed"}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-sm">
+                  Browser access: {message.browserCors === "Verify separately in the browser"
+                    ? "Not checked. Test video playback in a web browser to confirm this."
+                    : message.browserCors}
+                </p>
+              </section>
+            ) : (
+              <section role="status" aria-live="polite" className="gv-panel mb-6">
+                <h2 className="font-bold">Storage cleanup results</h2>
+                <ul className="mt-3 space-y-2 text-sm">
+                  <li>Expired uploads found: {message.expired}</li>
+                  <li>Uploads successfully cancelled: {message.cancelled}</li>
+                  <li>Stored files checked for removal: {message.attempted}</li>
+                  <li>Stored files removed: {message.deleted}</li>
+                </ul>
+              </section>
+            )
           ) : null}
           <section className="gv-panel">
             <h2 className="text-xl font-bold">Unfinished uploads</h2>
