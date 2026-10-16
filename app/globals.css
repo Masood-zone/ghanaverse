@@ -80,6 +80,38 @@ a {
   background: #d1d5db;
   border-radius: 999px;
 }
+.gv-hero-backdrop-enter {
+  animation: gv-hero-backdrop-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.gv-hero-content-enter {
+  animation: gv-hero-content-enter 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes gv-hero-backdrop-enter {
+  from {
+    opacity: 0.65;
+    transform: scale(1.025);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes gv-hero-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gv-hero-backdrop-enter,
+  .gv-hero-content-enter {
+    animation: none;
+  }
+}
 button:not(:disabled) {
   cursor: pointer;
 }

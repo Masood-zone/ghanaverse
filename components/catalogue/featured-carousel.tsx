@@ -67,7 +67,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
       return
     const timer = window.setInterval(
       () => setIndex((value) => (value + 1) % count),
-      7000
+      3000
     )
     return () => window.clearInterval(timer)
   }, [count, paused, hover, focused, dialogOpen, environmentPaused])
@@ -127,15 +127,17 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
           variant="backdrop"
           priority={activeIndex === 0}
           sizes="100vw"
+          className="gv-hero-backdrop-enter"
         />
       </div>
       <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/65 to-black/20" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
       <div
-        className="gv-container relative flex min-h-[480px] items-center py-12 md:min-h-[540px] md:py-16"
+        className="gv-container gv-hero-content-enter relative flex min-h-[480px] items-center py-12 md:min-h-[540px] md:py-16"
         role="group"
         aria-roledescription="slide"
         aria-label={`${activeIndex + 1} of ${count}`}
+        key={item.id}
       >
         <div className="max-w-2xl">
           <span className="rounded-full bg-amber-500 px-3 py-1 text-[10px] font-extrabold tracking-widest text-black uppercase">

@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const dependencies = vi.hoisted(() => ({
   requireUserPage: vi.fn(),
   profiles: vi.fn(),
+  isAdminRole: vi.fn((role: string) => role === "ADMIN"),
 }))
 vi.mock("@/lib/auth/access", () => ({
   requireUserPage: dependencies.requireUserPage,
+}))
+vi.mock("@/lib/auth/policy", () => ({
+  isAdminRole: dependencies.isAdminRole,
 }))
 vi.mock("@/lib/prisma", () => ({
   getPrisma: () => ({ viewerProfile: { findMany: dependencies.profiles } }),
@@ -19,10 +23,22 @@ import { authContinuationUrl } from "@/lib/auth/callback"
 beforeEach(() => {
   dependencies.requireUserPage
     .mockReset()
-    .mockResolvedValue({ user: { id: "current-user" } })
+    .mockResolvedValue({ user: { id: "current-user", role: "VIEWER" } })
   dependencies.profiles.mockReset()
+  dependencies.isAdminRole.mockImplementation((role) => role === "ADMIN")
 })
 describe("post-authentication routing", () => {
+  it("sends admins straight to the admin dashboard", async () => {
+    dependencies.requireUserPage.mockResolvedValue({
+      user: { id: "admin-user", role: "ADMIN" },
+    })
+    await expect(
+      AuthContinuationPage({
+        searchParams: Promise.resolve({ callbackUrl: "/library" }),
+      })
+    ).rejects.toThrow("REDIRECT:/admin")
+    expect(dependencies.profiles).not.toHaveBeenCalled()
+  })
   it.each([
     { label: "zero", profiles: [] },
     { label: "one", profiles: [{ id: "one" }] },
