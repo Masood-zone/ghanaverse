@@ -34,12 +34,16 @@ export async function uploadArtwork(file: File, purposeValue: unknown) {
       limitInputPixels: 40000000,
     })
       .rotate()
-      .resize({
-        width: 3840,
-        height: 3840,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
+      .resize(
+        purpose === "accountPhoto" || purpose === "profilePhoto"
+          ? { width: 512, height: 512, fit: "cover", withoutEnlargement: true }
+          : {
+              width: 3840,
+              height: 3840,
+              fit: "inside",
+              withoutEnlargement: true,
+            }
+      )
       .webp({ quality: 90 })
       .toBuffer()
   } catch {
@@ -53,7 +57,9 @@ export async function uploadArtwork(file: File, purposeValue: unknown) {
     throw new PlatformError(
       503,
       "UPLOADS_UNAVAILABLE",
-      "Artwork uploads require Cloudinary configuration. Your draft has been preserved."
+      purpose === "accountPhoto" || purpose === "profilePhoto"
+        ? "Photo uploads are temporarily unavailable. Your current photo has been kept."
+        : "Artwork uploads require Cloudinary configuration. Your draft has been preserved."
     )
   cloudinary.config({
     cloud_name: cloudName,

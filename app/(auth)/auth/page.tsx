@@ -2,6 +2,7 @@ import { Film, ShieldCheck } from "@/components/common/icons"
 import Link from "next/link"
 import { AuthForm } from "@/components/auth/auth-form"
 import { Brand } from "@/components/layout/brand"
+import { safeCallbackUrl } from "@/lib/auth/callback"
 
 export default async function AuthPage({
   searchParams,
@@ -9,10 +10,7 @@ export default async function AuthPage({
   searchParams: Promise<{ mode?: string; callbackUrl?: string }>
 }) {
   const query = await searchParams
-  const callbackUrl =
-    query.callbackUrl?.startsWith("/") && !query.callbackUrl.startsWith("//")
-      ? query.callbackUrl
-      : "/"
+  const callbackUrl = safeCallbackUrl(query.callbackUrl)
   return (
     <main className="relative min-h-screen bg-background p-4 sm:p-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,#fef3c7,transparent_28%),radial-gradient(circle_at_90%_90%,#dcfce7,transparent_25%)]" />

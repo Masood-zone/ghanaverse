@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
 import { usePlaybackTracking } from "./use-playback-tracking"
+import { PROFILE_CHANGED_EVENT } from "@/lib/viewer-events"
 type YTPlayer = {
   getCurrentTime(): number
   getDuration(): number
@@ -8,6 +9,8 @@ type YTPlayer = {
   getPlaybackRate(): number
   seekTo(time: number, allow: boolean): void
   destroy(): void
+  pauseVideo(): void
+  playVideo(): void
 }
 type YTNamespace = {
   Player: new (
@@ -20,6 +23,7 @@ type YTNamespace = {
         onReady(): void
         onStateChange(event: { data: number }): void
         onError(event: { data: number }): void
+        onAutoplayBlocked(): void
       }
     }
   ) => YTPlayer
@@ -63,18 +67,41 @@ export function YouTubePlayer({
   assetId,
   videoId,
   initialPosition = 0,
+  profileId,
+  preferSubtitles = false,
+  autoPlay = false,
+  onEnded,
+  onPlaybackStarted,
 }: {
   assetId: string
   videoId: string
   initialPosition?: number
+  profileId?: string
+  preferSubtitles?: boolean
+  autoPlay?: boolean
+  onEnded?: () => void
+  onPlaybackStarted?: () => void
 }) {
   const container = useRef<HTMLDivElement>(null)
   const player = useRef<YTPlayer | null>(null)
-  const tracking = usePlaybackTracking(assetId)
+  const tracking = usePlaybackTracking(assetId, profileId)
   const { observe, start, flush } = tracking
   const [error, setError] = useState("")
   const [ready, setReady] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false)
+  const callbacks = useRef({ onEnded, onPlaybackStarted })
+  useEffect(() => {
+    callbacks.current = { onEnded, onPlaybackStarted }
+  }, [onEnded, onPlaybackStarted])
+  useEffect(() => {
+    const stop = () => player.current?.pauseVideo()
+    window.addEventListener(PROFILE_CHANGED_EVENT, stop)
+    return () => window.removeEventListener(PROFILE_CHANGED_EVENT, stop)
+  }, [])
+  useEffect(() => {
+    if (autoPlay && ready) player.current?.playVideo()
+  }, [autoPlay, ready])
   useEffect(() => {
     let cancelled = false
     let playerReady = false
@@ -101,6 +128,7 @@ export function YouTubePlayer({
             origin: window.location.origin,
             playsinline: 1,
             autoplay: 0,
+            ...(preferSubtitles ? { cc_load_policy: 1 } : {}),
             controls: 1,
             rel: 0,
             start: Math.floor(initialPosition),
@@ -113,10 +141,17 @@ export function YouTubePlayer({
             onStateChange: (event) => {
               if (cancelled) return
               sample()
-              if (event.data === 1) start()
-              else if (event.data === 0 || event.data === 2)
-                void flush(event.data === 0)
+              if (event.data === 1) {
+                start()
+                setAutoplayBlocked(false)
+                callbacks.current.onPlaybackStarted?.()
+              } else if (event.data === 0)
+                void flush(true).then((saved) => {
+                  if (saved) callbacks.current.onEnded?.()
+                })
+              else if (event.data === 2) void flush()
             },
+            onAutoplayBlocked: () => setAutoplayBlocked(true),
             onError: (event) => {
               if (cancelled) return
               setError(
@@ -147,7 +182,15 @@ export function YouTubePlayer({
       player.current?.destroy()
       player.current = null
     }
-  }, [videoId, initialPosition, observe, start, flush, attempt])
+  }, [
+    videoId,
+    initialPosition,
+    observe,
+    start,
+    flush,
+    attempt,
+    preferSubtitles,
+  ])
   return (
     <div className="overflow-hidden rounded-xl bg-[#0d1726] text-white shadow-2xl">
       <div className="relative aspect-video min-h-[200px] [&_iframe]:h-full [&_iframe]:w-full">
@@ -185,8 +228,14 @@ export function YouTubePlayer({
         </div>
       ) : null}
       <p className="px-4 py-3 text-xs text-white/70">
-        YouTube playback{tracking.saveError ? ` · ${tracking.saveError}` : ""}
+        YouTube playback · Use YouTube’s CC controls for available captions.
+        {tracking.saveError ? ` · ${tracking.saveError}` : ""}
       </p>
+      {autoplayBlocked ? (
+        <p role="status" className="px-4 pb-4 text-sm">
+          Automatic playback was blocked. Press Play in the video to continue.
+        </p>
+      ) : null}
     </div>
   )
 }

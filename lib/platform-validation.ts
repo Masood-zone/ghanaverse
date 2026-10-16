@@ -27,6 +27,10 @@ const optionalId = z
 
 export const profileSchema = z.object({
   name: z.string().trim().min(1).max(40),
+  photoAssetId: z.string().min(1).nullable().optional(),
+  isKids: z.boolean().default(false),
+  autoplayNextEpisode: z.boolean().default(false),
+  preferSubtitles: z.boolean().default(false),
   avatar: z
     .enum(["adinkra", "kente", "coast", "savannah", "highlife", "market"])
     .optional()
@@ -36,8 +40,12 @@ export const profileSchema = z.object({
 export const profileSelectionSchema = z.object({
   profileId: z.string().trim().min(1),
 })
-export const watchlistSchema = z.object({ contentId: z.string().trim().min(1) })
+export const watchlistSchema = z.object({
+  contentId: z.string().trim().min(1),
+  profileId: z.string().min(1).optional(),
+})
 export const progressSchema = z.object({
+  profileId: z.string().min(1).optional(),
   videoAssetId: z.string().trim().min(1),
   positionSeconds: z.number().int().min(0),
   durationSeconds: z.number().int().positive().optional().nullable(),

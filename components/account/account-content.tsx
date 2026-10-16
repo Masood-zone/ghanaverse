@@ -1,7 +1,9 @@
 "use client"
 import { useAccount } from "@/services/viewer/account"
 import { QueryState } from "@/components/common/query-state"
-import { Mail, UserRound, Users } from "@/components/common/icons"
+import { Users } from "@/components/common/icons"
+import { PersonalDetailsForm } from "./personal-details-form"
+import { PersonAvatar } from "@/components/catalogue/content-artwork"
 import Link from "next/link"
 import { SignOutButton } from "@/components/auth/sign-out-button"
 import { PasswordForm } from "./password-form"
@@ -30,41 +32,7 @@ export function AccountContent() {
           Manage your GhanaVerse identity and viewer profiles.
         </p>
       </div>
-      <section className="mt-8 rounded-xl border bg-white p-5 md:p-7">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-lg bg-amber-100 text-primary">
-              <UserRound className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="font-bold">Personal Details</h2>
-              <p className="text-xs text-muted-foreground">
-                From your GhanaVerse account
-              </p>
-            </div>
-          </div>
-        </div>
-        <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg bg-muted p-4">
-            <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-              Full name
-            </dt>
-            <dd className="mt-2 flex items-center gap-2 font-bold">
-              <UserRound className="h-4 w-4 text-primary" />
-              {user.name}
-            </dd>
-          </div>
-          <div className="rounded-lg bg-muted p-4">
-            <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-              Email address
-            </dt>
-            <dd className="mt-2 flex items-center gap-2 font-bold">
-              <Mail className="h-4 w-4 text-primary" />
-              {user.email}
-            </dd>
-          </div>
-        </dl>
-      </section>
+      <PersonalDetailsForm key={user.id} user={user} />
       <section className="mt-6 rounded-xl border bg-white p-5 md:p-7">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
@@ -87,10 +55,15 @@ export function AccountContent() {
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           {profiles.map((profile) => (
             <div key={profile.id} className="rounded-lg bg-muted p-4">
-              <span className="grid h-11 w-11 place-items-center rounded-full bg-primary text-lg font-black text-white">
-                {profile.name[0]?.toUpperCase()}
-              </span>
+              <PersonAvatar
+                name={profile.name}
+                src={profile.image}
+                className="h-11 w-11"
+              />
               <h3 className="mt-3 font-bold">{profile.name}</h3>
+              {profile.isKids ? (
+                <p className="text-xs text-green-700">Kids · U &amp; PG</p>
+              ) : null}
               <p className="text-xs text-muted-foreground">
                 {profile.id === active?.id
                   ? "Active profile"

@@ -80,11 +80,32 @@ export async function mutateMedia({
         "SERIES_REQUIRED",
         "Seasons require a series"
       )
+    const input = seasonSchema.parse(raw)
+    if (
+      await tx.season.findFirst({
+        where: { seriesId: contentId, seasonNumber: input.seasonNumber },
+      })
+    )
+      throw new PlatformError(
+        409,
+        "DUPLICATE_SEASON_NUMBER",
+        `Season ${input.seasonNumber} already exists in this series. Choose another number.`
+      )
     result = await tx.season.create({
-      data: { ...seasonSchema.parse(raw), seriesId: contentId },
+      data: { ...input, seriesId: contentId },
     })
   } else if (kind === "seasons" && child === "episodes") {
     const input = episodeSchema.parse(raw)
+    if (
+      await tx.episode.findFirst({
+        where: { seasonId: id, episodeNumber: input.episodeNumber },
+      })
+    )
+      throw new PlatformError(
+        409,
+        "DUPLICATE_EPISODE_NUMBER",
+        `Episode ${input.episodeNumber} already exists in this season. Choose another number.`
+      )
     result = await tx.episode.create({
       data: {
         ...input,
@@ -93,7 +114,24 @@ export async function mutateMedia({
         seasonId: id,
       },
     })
-  } else if (kind === "seasons")
+  } else if (kind === "seasons") {
+    if (method !== "DELETE") {
+      const input = seasonSchema.parse(raw)
+      if (
+        await tx.season.findFirst({
+          where: {
+            seriesId: contentId,
+            seasonNumber: input.seasonNumber,
+            id: { not: id },
+          },
+        })
+      )
+        throw new PlatformError(
+          409,
+          "DUPLICATE_SEASON_NUMBER",
+          `Season ${input.seasonNumber} already exists in this series. Choose another number.`
+        )
+    }
     result =
       method === "DELETE"
         ? await tx.season.delete({ where: { id } })
@@ -101,10 +139,25 @@ export async function mutateMedia({
             where: { id },
             data: seasonSchema.parse(raw),
           })
-  else if (kind === "episodes") {
+  } else if (kind === "episodes") {
     if (method === "DELETE") result = await tx.episode.delete({ where: { id } })
     else {
       const input = episodeSchema.parse(raw)
+      const episode = await tx.episode.findUniqueOrThrow({ where: { id } })
+      if (
+        await tx.episode.findFirst({
+          where: {
+            seasonId: episode.seasonId,
+            episodeNumber: input.episodeNumber,
+            id: { not: id },
+          },
+        })
+      )
+        throw new PlatformError(
+          409,
+          "DUPLICATE_EPISODE_NUMBER",
+          `Episode ${input.episodeNumber} already exists in this season. Choose another number.`
+        )
       result = await tx.episode.update({
         where: { id },
         data: {

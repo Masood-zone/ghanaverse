@@ -12,13 +12,20 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { resolvePlaybackSource } from "@/lib/playback-source"
 import { usePlaybackTracking } from "./use-playback-tracking"
 import { YouTubePlayer } from "./youtube-player"
-type Props = {
+import { PROFILE_CHANGED_EVENT } from "@/lib/viewer-events"
+export type VideoPlayerProps = {
   assetId: string
   src: string
   sourceType: string
   poster?: string | null
   initialPosition?: number
+  profileId?: string
+  preferSubtitles?: boolean
+  autoPlay?: boolean
+  onEnded?: () => void
+  onPlaybackStarted?: () => void
 }
+type Props = VideoPlayerProps
 export function VideoPlayer(props: Props) {
   const source = resolvePlaybackSource(props.sourceType, props.src)
   if (!source)
@@ -33,12 +40,27 @@ export function VideoPlayer(props: Props) {
       assetId={props.assetId}
       videoId={source.videoId}
       initialPosition={props.initialPosition}
+      profileId={props.profileId}
+      preferSubtitles={props.preferSubtitles}
+      autoPlay={props.autoPlay}
+      onEnded={props.onEnded}
+      onPlaybackStarted={props.onPlaybackStarted}
     />
   ) : (
     <NativePlayer key={props.assetId} {...props} src={source.url} />
   )
 }
-function NativePlayer({ assetId, src, poster, initialPosition = 0 }: Props) {
+function NativePlayer({
+  assetId,
+  src,
+  poster,
+  initialPosition = 0,
+  profileId,
+  preferSubtitles = false,
+  autoPlay = false,
+  onEnded,
+  onPlaybackStarted,
+}: Props) {
   const ref = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false),
     [muted, setMuted] = useState(false)
@@ -46,7 +68,40 @@ function NativePlayer({ assetId, src, poster, initialPosition = 0 }: Props) {
     [duration, setDuration] = useState(0)
   const [error, setError] = useState(""),
     [loading, setLoading] = useState(true)
-  const { observe, start, flush, saveError } = usePlaybackTracking(assetId)
+  const { observe, start, flush, saveError } = usePlaybackTracking(
+    assetId,
+    profileId
+  )
+  const [hasCaptions, setHasCaptions] = useState(false)
+  const [captions, setCaptions] = useState(preferSubtitles)
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false)
+  useEffect(() => {
+    const video = ref.current
+    if (!video) return
+    const stop = () => video.pause()
+    window.addEventListener(PROFILE_CHANGED_EVENT, stop)
+    return () => window.removeEventListener(PROFILE_CHANGED_EVENT, stop)
+  }, [])
+  useEffect(() => {
+    if (autoPlay && ref.current)
+      void ref.current.play().catch(() => setAutoplayBlocked(true))
+  }, [autoPlay])
+  useEffect(() => {
+    const tracks = ref.current?.textTracks
+    if (!tracks) return
+    const update = () => {
+      const available = Array.from(tracks).filter(
+        (track) => track.kind === "captions" || track.kind === "subtitles"
+      )
+      setHasCaptions(available.length > 0)
+      available.forEach((track, index) => {
+        track.mode = captions && index === 0 ? "showing" : "disabled"
+      })
+    }
+    update()
+    tracks.addEventListener("addtrack", update)
+    return () => tracks.removeEventListener("addtrack", update)
+  }, [captions])
   const attach = useCallback(
     (video: HTMLVideoElement | null) => {
       ref.current = video
@@ -139,6 +194,8 @@ function NativePlayer({ assetId, src, poster, initialPosition = 0 }: Props) {
             if (Number.isFinite(length) && length > 0) setDuration(length)
           }}
           onPlaying={(event) => {
+            onPlaybackStarted?.()
+            setAutoplayBlocked(false)
             setPlaying(true)
             setLoading(false)
             setError("")
@@ -162,7 +219,9 @@ function NativePlayer({ assetId, src, poster, initialPosition = 0 }: Props) {
           onEnded={(event) => {
             setPlaying(false)
             sample(event.currentTarget, false)
-            void flush(true)
+            void flush(true).then((saved) => {
+              if (saved) onEnded?.()
+            })
           }}
           onError={(event) => {
             setPlaying(false)
@@ -255,6 +314,30 @@ function NativePlayer({ assetId, src, poster, initialPosition = 0 }: Props) {
           </Control>
         </div>
       </div>
+      <div className="flex items-center gap-3 px-4 py-2 text-xs text-white/70">
+        <button
+          type="button"
+          aria-label={
+            hasCaptions ? "Toggle subtitles" : "Subtitles unavailable"
+          }
+          aria-pressed={captions && hasCaptions}
+          disabled={!hasCaptions}
+          className="rounded-md border border-white/30 px-2 py-1 font-bold disabled:opacity-40"
+          onClick={() => setCaptions((value) => !value)}
+        >
+          CC
+        </button>
+        {!hasCaptions
+          ? "Subtitles unavailable for this video."
+          : captions
+            ? "Subtitles on"
+            : "Subtitles off"}
+      </div>
+      {autoplayBlocked ? (
+        <p role="status" className="px-4 py-3 text-sm">
+          Automatic playback was blocked. Press Play to continue.
+        </p>
+      ) : null}
       {error ? (
         <div role="alert" className="p-4 text-sm">
           <p>{error}</p>

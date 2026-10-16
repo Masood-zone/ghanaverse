@@ -2,25 +2,32 @@ import {
   AlertTriangle,
   ArrowLeft,
   LockKeyhole,
-  Play,
 } from "@/components/common/icons"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PersonAvatar } from "@/components/catalogue/content-artwork"
+import { SeriesPlayer } from "@/components/player/series-player"
+import { getSeriesViewingData } from "@/services/viewer/series"
+import { canViewContent } from "@/lib/viewer-policy"
+import { RestrictedContent } from "@/components/profiles/restricted-content"
 import { VideoPlayer } from "@/components/player/video-player"
 import { catalogueInclude } from "@/lib/catalogue"
 import { requireUserPage } from "@/lib/auth/access"
 import { isPermittedPlaybackAsset } from "@/lib/image-policy"
 import { getPrisma } from "@/lib/prisma"
 import { getActiveProfile } from "@/lib/profiles"
+import { callbackWithSearch } from "@/lib/auth/callback"
 
 export default async function WatchPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const { id } = await params
-  const { user } = await requireUserPage(`/watch/${id}`)
+  const [{ id }, query] = await Promise.all([params, searchParams])
+  const callbackUrl = callbackWithSearch(`/watch/${id}`, query)
+  const { user } = await requireUserPage(callbackUrl)
   const profile = await getActiveProfile(user.id)
   const asset = await getPrisma().videoAsset.findUnique({
     where: { id },
@@ -36,6 +43,8 @@ export default async function WatchPage({
   if (!asset) notFound()
   const content = asset.content ?? asset.episode?.season.series
   if (!content || content.publicationStatus !== "PUBLISHED") notFound()
+  if (!canViewContent(profile, content))
+    return <RestrictedContent callbackUrl={callbackUrl} />
   const permitted = isPermittedPlaybackAsset(asset)
   const premium = content.isPremium
   const progress = profile
@@ -49,17 +58,9 @@ export default async function WatchPage({
         orderBy: { lastWatchedAt: "desc" },
       })
     : null
-  const nextEpisode = asset.episode
-    ? await getPrisma().episode.findFirst({
-        where: {
-          seasonId: asset.episode.seasonId,
-          episodeNumber: { gt: asset.episode.episodeNumber },
-        },
-        orderBy: { episodeNumber: "asc" },
-        include: { videoAssets: true },
-      })
+  const navigation = asset.episode
+    ? await getSeriesViewingData(content, profile?.id, asset.episode.id)
     : null
-  const nextAsset = nextEpisode?.videoAssets.find(isPermittedPlaybackAsset)
   const title = asset.episode
     ? `${content.title} — S${asset.episode.season.seasonNumber}:E${asset.episode.episodeNumber} “${asset.episode.title}”`
     : content.title
@@ -84,7 +85,7 @@ export default async function WatchPage({
           <PlayerState
             icon={<LockKeyhole />}
             title="Premium playback is not available yet"
-            body="This title is marked premium, but subscription entitlement is intentionally outside Phase 4."
+            body="This title requires a subscription. Premium playback is currently unavailable."
           />
         ) : !permitted ? (
           <PlayerState
@@ -92,15 +93,36 @@ export default async function WatchPage({
             title="Playback is not permitted for this asset"
             body="This title needs an enabled, supported playback source."
           />
+        ) : navigation ? (
+          <SeriesPlayer
+            key={`${profile?.id}:${asset.id}`}
+            player={{
+              assetId: asset.id,
+              sourceType: asset.sourceType,
+              src: asset.playbackUrl,
+              poster: asset.episode?.thumbnailUrl ?? content.backdropUrl,
+              initialPosition: progress?.completed
+                ? 0
+                : (progress?.positionSeconds ?? 0),
+              profileId: profile?.id,
+              preferSubtitles: profile?.preferSubtitles,
+            }}
+            navigation={navigation}
+            autoplayNextEpisode={profile?.autoplayNextEpisode ?? false}
+            backdrop={content.backdropUrl}
+          />
         ) : (
           <VideoPlayer
+            key={`${profile?.id}:${asset.id}`}
             assetId={asset.id}
             sourceType={asset.sourceType}
             src={asset.playbackUrl}
-            poster={asset.episode?.thumbnailUrl ?? content.backdropUrl}
+            poster={content.backdropUrl}
             initialPosition={
               progress?.completed ? 0 : (progress?.positionSeconds ?? 0)
             }
+            profileId={profile?.id}
+            preferSubtitles={profile?.preferSubtitles}
           />
         )}
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -138,47 +160,30 @@ export default async function WatchPage({
             </div>
           </section>
           <aside className="rounded-xl border bg-white p-5">
-            {nextEpisode ? (
-              <>
-                <p className="text-[10px] font-bold tracking-[.16em] text-primary uppercase">
-                  Up next in series
-                </p>
-                <h2 className="mt-3 text-xl font-extrabold">
-                  {nextEpisode.title}
-                </h2>
-                <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
-                  {nextEpisode.description}
-                </p>
-                {nextAsset ? (
-                  <Link
-                    href={`/watch/${nextAsset.id}`}
-                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-bold text-white"
-                  >
-                    <Play className="h-4 w-4 fill-current" />
-                    Play Episode {nextEpisode.episodeNumber}
-                  </Link>
-                ) : (
-                  <p className="mt-5 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                    The next episode has no permitted playback asset.
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-[10px] font-bold tracking-[.16em] text-primary uppercase">
-                  GhanaVerse
-                </p>
-                <h2 className="mt-3 text-xl font-extrabold">
-                  Explore more Ghanaian stories
-                </h2>
-                <Link
-                  href="/browse"
-                  className="mt-5 inline-block text-sm font-bold text-primary"
-                >
-                  Browse catalogue →
-                </Link>
-              </>
-            )}
+            <p className="text-xs font-bold tracking-wider text-primary uppercase">
+              Your viewing profile
+            </p>
+            <h2 className="mt-3 text-xl font-bold">
+              {profile?.name ?? "Viewer"}
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Your history and resume position are saved to this profile.
+            </p>
+            <Link
+              href={`/profiles?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+              className="mt-4 inline-block text-sm font-bold text-primary"
+            >
+              Switch profile →
+            </Link>
+            <Link
+              href={`/title/${content.slug}`}
+              className="mt-4 block text-sm font-bold text-primary"
+            >
+              {asset.episode
+                ? "View all seasons and episodes"
+                : "View title details"}{" "}
+              →
+            </Link>
           </aside>
         </div>
       </div>

@@ -4,6 +4,8 @@ export const uploadPurposeSchema = z.enum([
   "backdrop",
   "creatorPortrait",
   "episodeThumbnail",
+  "accountPhoto",
+  "profilePhoto",
 ])
 export type UploadPurpose = z.infer<typeof uploadPurposeSchema>
 export const MAX_ARTWORK_BYTES = 8 * 1024 * 1024

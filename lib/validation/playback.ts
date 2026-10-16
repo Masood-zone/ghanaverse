@@ -1,5 +1,6 @@
 import { z } from "zod"
 export const playbackSessionSchema = z.object({
+  profileId: z.string().min(1).optional(),
   videoAssetId: z.string().min(1),
   idempotencyKey: z.uuid(),
 })

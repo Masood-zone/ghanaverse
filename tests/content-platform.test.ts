@@ -1,5 +1,8 @@
 import "dotenv/config"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+vi.mock("@/lib/viewer-context", () => ({
+  getViewerContext: async () => ({ access: null, profile: null }),
+}))
 import { PublicationStatus, ContentType } from "@/app/generated/prisma/enums"
 import { catalogueQuerySchema, getCataloguePage } from "@/lib/catalogue"
 import { getPrisma } from "@/lib/prisma"

@@ -1,11 +1,13 @@
 "use client"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { authClient } from "@/lib/auth-client"
+import { safeCallbackUrl, profilePickerUrl } from "@/lib/auth/callback"
+import { api } from "@/lib/api-client"
+import type { ProfilesData } from "@/types/viewer"
 import { FormError } from "@/components/admin/shared"
 import {
   getAuthFormSchema,
@@ -22,7 +24,6 @@ export function AuthForm({
 }) {
   const [mode, setMode] = useState(initialMode)
   const [error, setError] = useState("")
-  const router = useRouter()
   const client = useQueryClient()
   const form = useForm<Values>({
     resolver: zodResolver(getAuthFormSchema(mode)),
@@ -61,15 +62,34 @@ export function AuthForm({
         )
         return
       }
+      const session = await authClient.getSession({
+        query: { disableCookieCache: true },
+      })
+      if (!session.data?.user) {
+        setError(
+          mode === "register"
+            ? "Your account was created, but sign-in could not finish. Sign in below to continue."
+            : "Sign-in could not finish. Please try again."
+        )
+        setMode("sign-in")
+        return
+      }
+      await client.cancelQueries()
       client.clear()
-      const destination =
-        callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
-          ? callbackUrl
-          : "/"
-      router.replace(destination)
-      router.refresh()
+      const profiles = await api<ProfilesData>("/profiles")
+      if (mode === "register")
+        sessionStorage.setItem("ghanaverse.welcome", session.data.user.name)
+      const destination = safeCallbackUrl(callbackUrl)
+      window.location.replace(
+        profiles.profiles.length > 1
+          ? profilePickerUrl(destination)
+          : destination
+      )
     } catch {
-      setError("Authentication could not be completed. Please try again.")
+      setError(
+        "We could not finish opening your account. Try signing in to continue; your original destination is preserved."
+      )
+      setMode("sign-in")
     }
   }
   return (

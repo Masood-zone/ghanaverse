@@ -16,6 +16,7 @@ import { minutesToSeconds } from "@/lib/playback-metrics"
 import type { EditorRecord } from "@/types/admin"
 import FileUpload from "@/components/common/FileUpload"
 import { FormError } from "./shared"
+import { selectPlaybackAsset } from "@/lib/series"
 type Season = EditorRecord["seasons"][number]
 type Episode = Season["episodes"][number]
 function EpisodeForm({
@@ -37,7 +38,9 @@ function EpisodeForm({
       ? { ...episode, airDate: episode.airDate }
       : {
           title: "",
-          episodeNumber: season.episodes.length + 1,
+          episodeNumber:
+            Math.max(0, ...season.episodes.map((item) => item.episodeNumber)) +
+            1,
           description: null,
           thumbnailUrl: null,
           runtimeMinutes: null,
@@ -122,10 +125,12 @@ function SeasonForm({
   contentId,
   season,
   close,
+  nextSeasonNumber,
 }: {
   contentId: string
   season?: Season
   close: () => void
+  nextSeasonNumber: number
 }) {
   const form = useForm<
     z.input<typeof seasonSchema>,
@@ -134,7 +139,7 @@ function SeasonForm({
   >({
     resolver: zodResolver(seasonSchema),
     defaultValues: {
-      seasonNumber: season?.seasonNumber ?? 1,
+      seasonNumber: season?.seasonNumber ?? nextSeasonNumber,
       title: season?.title ?? "",
       description: season?.description ?? "",
     },
@@ -246,6 +251,17 @@ export function SeriesMediaContent({
     ...record.videoAssets,
     ...record.seasons.flatMap((s) => s.episodes.flatMap((e) => e.videoAssets)),
   ]
+  const selectedEpisodeId = useWatch({
+    control: media.control,
+    name: "episodeId",
+  })
+  function managePlayback(episodeId: string) {
+    media.setValue("episodeId", episodeId, { shouldDirty: true })
+    document
+      .getElementById("series-media-form")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" })
+    media.setFocus("playbackUrl")
+  }
   return (
     <fieldset disabled={disabled} className="mt-6 grid gap-6">
       <section className="gv-panel">
@@ -299,6 +315,17 @@ export function SeriesMediaContent({
               <p className="mt-2 text-xs text-slate-600">
                 Manage seasons and episodes, and attach playback links.
               </p>
+              <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
+                1. Add a season. 2. Add numbered episodes. 3. Attach and enable
+                playback for each episode. 4. Publish the series when its
+                metadata is ready. Episodes follow season and episode number,
+                including across seasons.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Metadata readiness and playback readiness are separate.
+                Catalogue-only series can be published. Unpublish a series
+                before changing its episodes or media.
+              </p>
             </div>
             <button
               type="button"
@@ -310,8 +337,15 @@ export function SeriesMediaContent({
           </div>
           {seasonEditing !== undefined ? (
             <SeasonForm
+              key={seasonEditing?.id ?? "new"}
               contentId={record.id}
               season={seasonEditing ?? undefined}
+              nextSeasonNumber={
+                Math.max(
+                  0,
+                  ...record.seasons.map((item) => item.seasonNumber)
+                ) + 1
+              }
               close={() => setSeasonEditing(undefined)}
             />
           ) : null}
@@ -355,8 +389,29 @@ export function SeriesMediaContent({
                           {String(episode.episodeNumber).padStart(2, "0")}
                         </strong>
                         {episode.title}
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {record.isPremium
+                            ? "Premium playback unavailable"
+                            : selectPlaybackAsset(episode.videoAssets)
+                              ? "Playback ready"
+                              : episode.videoAssets.length
+                                ? "Playback disabled or unsupported"
+                                : "No playback attached"}
+                          {episode.videoAssets.length
+                            ? ` · ${episode.videoAssets.map((asset) => asset.sourceType).join(", ")}`
+                            : ""}
+                        </span>
                       </span>
                       <div className="flex gap-3 text-xs">
+                        <button
+                          type="button"
+                          className="font-semibold text-primary"
+                          onClick={() => managePlayback(episode.id)}
+                        >
+                          {episode.videoAssets.length
+                            ? "Manage playback"
+                            : "Add playback"}
+                        </button>
                         <button
                           type="button"
                           onClick={() => setEpisodeEditing({ season, episode })}
@@ -402,32 +457,38 @@ export function SeriesMediaContent({
           video-file link. YouTube playback must remain free.
         </p>
         <div className="my-4 space-y-3">
-          {assets.map((asset) => (
-            <div
-              className="flex items-center justify-between gap-3 rounded-lg bg-white p-4 text-xs"
-              key={asset.id}
-            >
-              <div className="min-w-0">
-                <p className="truncate font-semibold">{asset.playbackUrl}</p>
-                <p className="mt-1 text-muted-foreground">
-                  {asset.isPlayable ? "Playable" : "Stored only"} ·{" "}
-                  {asset.licenseType}
-                  {asset.episodeId ? " · Episode asset" : ""}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="text-red-700"
-                onClick={() =>
-                  remove(`video-assets/${asset.id}`, "playback asset")
-                }
+          {assets
+            .filter(
+              (asset) =>
+                !selectedEpisodeId || asset.episodeId === selectedEpisodeId
+            )
+            .map((asset) => (
+              <div
+                className="flex items-center justify-between gap-3 rounded-lg bg-white p-4 text-xs"
+                key={asset.id}
               >
-                Delete
-              </button>
-            </div>
-          ))}
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{asset.playbackUrl}</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {asset.isPlayable ? "Playable" : "Stored only"} ·{" "}
+                    {asset.licenseType}
+                    {asset.episodeId ? " · Episode asset" : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="text-red-700"
+                  onClick={() =>
+                    remove(`video-assets/${asset.id}`, "playback asset")
+                  }
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
         </div>
         <form
+          id="series-media-form"
           className="grid gap-4 md:grid-cols-2"
           onSubmit={media.handleSubmit((values) =>
             mutation.mutate(

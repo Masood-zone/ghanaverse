@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { ProfileManager } from "@/components/profiles/profile-manager"
 
-export function ProfilesContent() {
+export function ProfilesContent({ callbackUrl }: { callbackUrl?: string }) {
   return (
     <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[radial-gradient(circle_at_8%_15%,#fef3c7,transparent_26%),radial-gradient(circle_at_90%_88%,#dcfce7,transparent_28%),#faf9f6]">
       <div className="gv-container py-14 text-center md:py-24">
@@ -17,7 +17,11 @@ export function ProfilesContent() {
           Choose a profile to access personalized Ghanaian stories, your
           library, and viewing history.
         </p>
-        <ProfileManager />
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground">
+          Each profile has its own saved list, history, resume positions,
+          recommendations, and playback preferences.
+        </p>
+        <ProfileManager callbackUrl={callbackUrl} />
         <div className="mx-auto mt-12 max-w-2xl border-t pt-6 text-right">
           <Link
             href="/account"

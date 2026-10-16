@@ -11,6 +11,7 @@ type ArtworkProps = {
   variant?: "poster" | "backdrop" | "landscape"
   className?: string
   priority?: boolean
+  sizes?: string
 }
 export function ContentArtwork({
   src,
@@ -18,6 +19,7 @@ export function ContentArtwork({
   variant = "poster",
   className,
   priority = false,
+  sizes,
 }: ArtworkProps) {
   const fallback =
     variant === "poster"
@@ -33,9 +35,10 @@ export function ContentArtwork({
       fill
       priority={priority}
       sizes={
-        variant === "poster"
+        sizes ??
+        (variant === "poster"
           ? "(max-width: 640px) 48vw, (max-width: 1024px) 30vw, 220px"
-          : "(max-width: 768px) 100vw, 50vw"
+          : "(max-width: 768px) 100vw, 50vw")
       }
       className={cn("object-cover", className)}
       onError={() => setFailedSrc(candidate)}

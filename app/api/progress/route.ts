@@ -7,6 +7,7 @@ import { progressSchema } from "@/lib/platform-validation"
 import { requireActiveProfile } from "@/lib/profiles"
 import { PlatformError, routeError } from "@/lib/route-error"
 import { recordPlaybackSample } from "@/services/viewer/playback-operations"
+import { canViewContent } from "@/lib/viewer-policy"
 
 export async function PUT(request: Request) {
   try {
@@ -20,8 +21,8 @@ export async function PUT(request: Request) {
         "INVALID_ORIGIN",
         "Request origin is not permitted."
       )
-    const profile = await requireActiveProfile(user.id)
     const input = progressSchema.parse(await request.json())
+    const profile = await requireActiveProfile(user.id, input.profileId)
     const asset = await getPrisma().videoAsset.findUnique({
       where: { id: input.videoAssetId },
       include: {
@@ -45,6 +46,12 @@ export async function PUT(request: Request) {
         403,
         "PLAYBACK_NOT_PERMITTED",
         "This media asset is not permitted for playback."
+      )
+    if (!canViewContent(profile, parent))
+      throw new PlatformError(
+        403,
+        "PROFILE_CONTENT_RESTRICTED",
+        "This title is not available in Kids mode."
       )
     if (parent.isPremium)
       throw new PlatformError(

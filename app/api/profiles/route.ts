@@ -2,26 +2,32 @@ import { getProfilesData } from "@/services/viewer/operations"
 import { cookies } from "next/headers"
 import { apiSuccess } from "@/lib/api-response"
 import { requireUser } from "@/lib/auth/access"
-import { getPrisma } from "@/lib/prisma"
+import { getPrisma, sqlTable } from "@/lib/prisma"
 import { ACTIVE_PROFILE_COOKIE, MAX_PROFILES } from "@/lib/profiles"
 import { profileSchema } from "@/lib/platform-validation"
 import { PlatformError, routeError } from "@/lib/route-error"
+import { ownedPhoto, verifyOrigin } from "@/lib/viewer-photos"
 
 export async function POST(request: Request) {
   try {
     const { user } = await requireUser()
-    const input = profileSchema.parse(await request.json())
-    if (
-      (await getPrisma().viewerProfile.count({ where: { userId: user.id } })) >=
-      MAX_PROFILES
-    )
-      throw new PlatformError(
-        409,
-        "PROFILE_LIMIT_REACHED",
-        `An account can have up to ${MAX_PROFILES} profiles.`
+    verifyOrigin(request)
+    const { photoAssetId, ...input } = profileSchema.parse(await request.json())
+    const image = await ownedPhoto(user.id, photoAssetId, "profilePhoto")
+    const profile = await getPrisma().$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM ${sqlTable("User")} WHERE "id" = ${user.id} FOR UPDATE`
+      if (
+        (await tx.viewerProfile.count({ where: { userId: user.id } })) >=
+        MAX_PROFILES
       )
-    const profile = await getPrisma().viewerProfile.create({
-      data: { userId: user.id, ...input },
+        throw new PlatformError(
+          409,
+          "PROFILE_LIMIT_REACHED",
+          `An account can have up to ${MAX_PROFILES} profiles.`
+        )
+      return tx.viewerProfile.create({
+        data: { userId: user.id, ...input, image },
+      })
     })
     ;(await cookies()).set(ACTIVE_PROFILE_COOKIE, profile.id, {
       httpOnly: true,

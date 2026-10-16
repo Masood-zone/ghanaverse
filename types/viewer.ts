@@ -1,10 +1,19 @@
 import type { CatalogueCardItem } from "@/components/catalogue/content-card"
-export type ViewerProfile = { id: string; name: string; avatar: string | null }
+export type ViewerProfile = {
+  id: string
+  name: string
+  avatar: string | null
+  image: string | null
+  isKids: boolean
+  autoplayNextEpisode: boolean
+  preferSubtitles: boolean
+}
 export type ProfilesData = { profiles: ViewerProfile[]; activeId?: string }
 export type AccountData = {
   id: string
   name: string
   email: string
+  image: string | null
   role: "ADMIN" | "VIEWER" | "RIGHTS_HOLDER"
   hasRightsHolderReports: boolean
   profiles: ViewerProfile[]

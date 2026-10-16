@@ -1,11 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import type { ProfilesData, ViewerProfile } from "@/types/viewer"
+import type { z } from "zod"
+import type { profileSchema } from "@/lib/platform-validation"
+import { authClient } from "@/lib/auth-client"
 export const getProfiles = (signal?: AbortSignal) =>
   api<ProfilesData>("/profiles", { signal })
 export function useViewerProfiles() {
+  const { data: session } = authClient.useSession()
   return useQuery({
-    queryKey: ["viewer", "profiles"],
+    queryKey: ["viewer", "profiles", session?.user.id],
+    enabled: Boolean(session?.user),
     queryFn: ({ signal }) => getProfiles(signal),
   })
 }
@@ -14,18 +19,16 @@ export function useSaveProfile() {
   return useMutation({
     mutationFn: ({
       profile,
-      name,
-      avatar,
+      values,
     }: {
       profile: ViewerProfile | "new"
-      name: string
-      avatar: string
+      values: z.output<typeof profileSchema>
     }) =>
       api<ViewerProfile>(
         profile === "new" ? "/profiles" : `/profiles/${profile.id}`,
         {
           method: profile === "new" ? "POST" : "PATCH",
-          body: JSON.stringify({ name, avatar }),
+          body: JSON.stringify(values),
         }
       ),
     onSuccess: () => client.invalidateQueries({ queryKey: ["viewer"] }),

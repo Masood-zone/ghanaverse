@@ -34,13 +34,22 @@ export async function requireOwnedProfile(userId: string, profileId: string) {
   return profile
 }
 
-export async function requireActiveProfile(userId: string) {
+export async function requireActiveProfile(
+  userId: string,
+  expectedId?: string
+) {
   const profile = await getActiveProfile(userId)
   if (!profile)
     throw new PlatformError(
       409,
       "PROFILE_REQUIRED",
       "Create a viewer profile to continue."
+    )
+  if (expectedId && profile.id !== expectedId)
+    throw new PlatformError(
+      409,
+      "PROFILE_CHANGED",
+      "Your active profile changed. Reload this page to continue."
     )
   return profile
 }

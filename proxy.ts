@@ -18,7 +18,10 @@ export function proxy(request: NextRequest) {
     .some((cookie) => cookie.name.includes("session_token"))
   if (isProtected && !hasSessionCookie) {
     const url = new URL("/auth", request.url)
-    url.searchParams.set("callbackUrl", request.nextUrl.pathname)
+    url.searchParams.set(
+      "callbackUrl",
+      request.nextUrl.pathname + request.nextUrl.search
+    )
     return NextResponse.redirect(url)
   }
   return NextResponse.next()

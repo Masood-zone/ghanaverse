@@ -10,9 +10,15 @@ import { TrailerDialog } from "@/components/catalogue/trailer-dialog"
 import { WatchlistButton } from "@/components/catalogue/watchlist-button"
 import { getOptionalUser } from "@/lib/auth/access"
 import { getPublishedContent, getPublishedContentBySlug } from "@/lib/catalogue"
-import { isPermittedPlaybackAsset, safeExternalUrl } from "@/lib/image-policy"
+import { safeExternalUrl } from "@/lib/image-policy"
 import { getPrisma } from "@/lib/prisma"
 import { getActiveProfile } from "@/lib/profiles"
+import { canViewContent } from "@/lib/viewer-policy"
+import { getSeriesViewingData } from "@/services/viewer/series"
+import { EpisodeBrowser } from "@/components/player/episode-browser"
+import { episodeLabel, selectPlaybackAsset } from "@/lib/series"
+import { RestrictedContent } from "@/components/profiles/restricted-content"
+import { callbackWithSearch } from "@/lib/auth/callback"
 
 type WatchLink = {
   url?: string
@@ -28,13 +34,24 @@ const display = (value: string) =>
 
 export default async function TitlePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const content = await getPublishedContentBySlug((await params).slug)
   if (!content) notFound()
   const access = await getOptionalUser()
   const profile = access ? await getActiveProfile(access.user.id) : null
+  if (!canViewContent(profile, content))
+    return (
+      <RestrictedContent
+        callbackUrl={callbackWithSearch(
+          `/title/${content.slug}`,
+          await searchParams
+        )}
+      />
+    )
   const saved = profile
     ? Boolean(
         await getPrisma().watchlistItem.findUnique({
@@ -55,8 +72,12 @@ export default async function TitlePage({
     Array.isArray(content.externalWatchLinks) ? content.externalWatchLinks : []
   ) as WatchLink[]
   const mainAsset = !content.isPremium
-    ? content.videoAssets.find(isPermittedPlaybackAsset)
+    ? selectPlaybackAsset(content.videoAssets)
     : undefined
+  const series =
+    content.contentType === "SERIES"
+      ? await getSeriesViewingData(content, profile?.id)
+      : null
   const related = (
     await getPublishedContent({
       genre: content.genres[0]?.genre.slug,
@@ -126,6 +147,20 @@ export default async function TitlePage({
               {content.description}
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
+              {series?.resume ? (
+                <Link
+                  href={
+                    series.resume.assetId
+                      ? `/watch/${series.resume.assetId}`
+                      : "#episodes"
+                  }
+                  className="gv-action"
+                >
+                  {!series.resume.available
+                    ? `${episodeLabel(series.resume)} unavailable · Browse episodes`
+                    : `${series.resume.completed ? "Replay" : series.resume.positionSeconds > 0 ? "Resume" : "Play"} ${episodeLabel(series.resume)}`}
+                </Link>
+              ) : null}
               {mainAsset ? (
                 <Link
                   href={`/watch/${mainAsset.id}`}
@@ -159,81 +194,12 @@ export default async function TitlePage({
       <div className="gv-container py-10">
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <main className="space-y-7">
-            {content.seasons.length ? (
-              <section className="rounded-xl border bg-white p-5 md:p-7">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-[10px] font-bold tracking-[.16em] text-primary uppercase">
-                      Series
-                    </p>
-                    <h2 className="mt-1 text-2xl font-extrabold">Episodes</h2>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {content.seasons.length} season
-                    {content.seasons.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <div className="mt-6 space-y-4">
-                  {content.seasons.map((season) => (
-                    <div key={season.id}>
-                      <h3 className="mb-3 font-bold">
-                        {season.title ?? `Season ${season.seasonNumber}`}
-                      </h3>
-                      <div className="space-y-3">
-                        {season.episodes.map((episode) => {
-                          const asset = !content.isPremium
-                            ? episode.videoAssets.find(isPermittedPlaybackAsset)
-                            : undefined
-                          return (
-                            <article
-                              key={episode.id}
-                              className="grid gap-4 rounded-lg bg-muted p-3 sm:grid-cols-[180px_1fr]"
-                            >
-                              <div className="relative aspect-video overflow-hidden rounded-md">
-                                <ContentArtwork
-                                  src={
-                                    episode.thumbnailUrl ?? content.backdropUrl
-                                  }
-                                  alt=""
-                                  variant="landscape"
-                                />
-                                {asset ? (
-                                  <Link
-                                    href={`/watch/${asset.id}`}
-                                    className="absolute inset-0 grid place-items-center bg-black/15"
-                                  >
-                                    <span className="grid h-10 w-10 place-items-center rounded-full bg-primary text-white">
-                                      <Play className="h-4 w-4 fill-current" />
-                                    </span>
-                                  </Link>
-                                ) : null}
-                              </div>
-                              <div className="self-center">
-                                <p className="text-[10px] font-bold tracking-wider text-primary uppercase">
-                                  Episode {episode.episodeNumber}
-                                </p>
-                                <h4 className="mt-1 font-bold">
-                                  {episode.title}
-                                </h4>
-                                {episode.description ? (
-                                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-                                    {episode.description}
-                                  </p>
-                                ) : null}
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                  {episode.runtimeMinutes
-                                    ? `${episode.runtimeMinutes} min`
-                                    : null}
-                                </p>
-                              </div>
-                            </article>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+            {series ? (
+              <EpisodeBrowser
+                episodes={series.episodes}
+                initialSeasonId={series.resume?.seasonId}
+                backdrop={content.backdropUrl}
+              />
             ) : null}
             {cast.length + crew.length ? (
               <section className="rounded-xl border bg-white p-5 md:p-7">

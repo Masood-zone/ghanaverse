@@ -2,6 +2,8 @@ import "server-only"
 
 import { z } from "zod"
 import { ContentType, PublicationStatus } from "@/app/generated/prisma/enums"
+import { getViewerContext } from "@/lib/viewer-context"
+import { viewerContentWhere } from "@/lib/viewer-policy"
 import { getPrisma } from "@/lib/prisma"
 
 export const catalogueInclude = {
@@ -118,7 +120,8 @@ function catalogueOrder(sort: CatalogueQuery["sort"]) {
 
 export async function getCataloguePage(queryInput?: Partial<CatalogueQuery>) {
   const query = catalogueQuerySchema.parse(queryInput ?? {})
-  const where = catalogueWhere(query)
+  const { profile } = await getViewerContext()
+  const where = { ...catalogueWhere(query), ...viewerContentWhere(profile) }
   const prisma = getPrisma()
   const [items, total] = await Promise.all([
     prisma.content.findMany({

@@ -16,7 +16,7 @@ type Snapshot = {
   completed: boolean
 }
 
-export function usePlaybackTracking(assetId: string) {
+export function usePlaybackTracking(assetId: string, profileId?: string) {
   const tracker = useMemo(() => new PlaybackTracker(), [])
   const identity = useRef<{
     key: string
@@ -38,6 +38,7 @@ export function usePlaybackTracking(assetId: string) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           videoAssetId: assetId,
+          profileId,
           idempotencyKey: value.key,
         }),
       })
@@ -53,7 +54,7 @@ export function usePlaybackTracking(assetId: string) {
           throw error
         })
     return value.request
-  }, [assetId])
+  }, [assetId, profileId])
   const observe = useCallback(
     (state: PlaybackObservation) => {
       tracker.observe(
@@ -76,12 +77,13 @@ export function usePlaybackTracking(assetId: string) {
   const queue = useRef<ProgressQueue<Snapshot> | null>(null)
   const flush = useCallback(
     async (completed = false) => {
-      if (!identity.current.started) return
+      if (!identity.current.started) return false
       queue.current ??= new ProgressQueue<Snapshot>(
         async (snapshot) => {
           const sessionId = await session()
           await flushProgress({
             videoAssetId: assetId,
+            profileId,
             positionSeconds: snapshot.positionSeconds,
             durationSeconds: snapshot.durationSeconds,
             completed: snapshot.completed,
@@ -120,13 +122,15 @@ export function usePlaybackTracking(assetId: string) {
       try {
         await queue.current.enqueue(snapshot)
         setSaveError("")
+        return true
       } catch {
         setSaveError(
           "Viewing progress could not be saved. We’ll retry while you watch."
         )
+        return false
       }
     },
-    [assetId, tracker, session, client]
+    [assetId, profileId, tracker, session, client]
   )
   useEffect(() => {
     const interval = window.setInterval(() => {

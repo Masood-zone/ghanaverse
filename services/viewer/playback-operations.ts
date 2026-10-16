@@ -10,6 +10,7 @@ import {
   type WatchedRange,
 } from "@/lib/playback-metrics"
 import { playbackSessionSchema } from "@/lib/validation/playback"
+import { canViewContent } from "@/lib/viewer-policy"
 import type { sessionTelemetrySchema } from "@/lib/validation/playback"
 
 export async function permittedAsset(id: string) {
@@ -43,15 +44,20 @@ export async function startPlaybackSession(
 ) {
   const input = playbackSessionSchema.parse(raw)
   const { asset, content } = await permittedAsset(input.videoAssetId)
-  if (
-    !(await getPrisma().viewerProfile.findFirst({
-      where: { id: profileId, userId },
-    }))
-  )
+  const profile = await getPrisma().viewerProfile.findFirst({
+    where: { id: profileId, userId },
+  })
+  if (!profile)
     throw new PlatformError(
       403,
       "PROFILE_NOT_OWNED",
       "Viewer profile is not available."
+    )
+  if (!canViewContent(profile, content))
+    throw new PlatformError(
+      403,
+      "PROFILE_CONTENT_RESTRICTED",
+      "This title is not available in Kids mode."
     )
   const session = await getPrisma().playbackSession.upsert({
     where: { idempotencyKey: input.idempotencyKey },

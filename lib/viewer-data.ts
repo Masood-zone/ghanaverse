@@ -2,7 +2,8 @@ import "server-only"
 
 import { PublicationStatus } from "@/app/generated/prisma/enums"
 import { catalogueInclude } from "@/lib/catalogue"
-import { getOptionalUser } from "@/lib/auth/access"
+import { getViewerContext } from "@/lib/viewer-context"
+import { viewerContentWhere } from "@/lib/viewer-policy"
 import { getPrisma } from "@/lib/prisma"
 import { getActiveProfile } from "@/lib/profiles"
 import { rankRecommendations } from "@/lib/recommendations"
@@ -19,9 +20,14 @@ const progressInclude = {
 
 export async function getHomeData() {
   const prisma = getPrisma()
-  const [content, collections, access] = await Promise.all([
+  const { access, profile } = await getViewerContext()
+  const eligible = {
+    publicationStatus: PublicationStatus.PUBLISHED,
+    ...viewerContentWhere(profile),
+  }
+  const [content, collections] = await Promise.all([
     prisma.content.findMany({
-      where: { publicationStatus: PublicationStatus.PUBLISHED },
+      where: eligible,
       include: catalogueInclude,
       orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
       take: 48,
@@ -33,20 +39,18 @@ export async function getHomeData() {
         items: {
           orderBy: { sortOrder: "asc" },
           where: {
-            content: { publicationStatus: PublicationStatus.PUBLISHED },
+            content: eligible,
           },
           include: { content: { include: catalogueInclude } },
         },
       },
     }),
-    getOptionalUser(),
   ])
   const featured =
     content.find((item) => item.isFeatured && item.backdropUrl) ??
     content.find((item) => item.backdropUrl) ??
     content[0]
   if (!access) return { content, collections, featured, viewer: null }
-  const profile = await getActiveProfile(access.user.id)
   if (!profile)
     return {
       content,
@@ -63,7 +67,10 @@ export async function getHomeData() {
     prisma.watchlistItem.findMany({
       where: {
         profileId: profile.id,
-        content: { publicationStatus: PublicationStatus.PUBLISHED },
+        content: {
+          publicationStatus: PublicationStatus.PUBLISHED,
+          ...viewerContentWhere(profile),
+        },
       },
       include: { content: { include: catalogueInclude } },
       orderBy: { createdAt: "desc" },
@@ -75,11 +82,19 @@ export async function getHomeData() {
         positionSeconds: { gt: 0 },
         completed: false,
         OR: [
-          { content: { publicationStatus: PublicationStatus.PUBLISHED } },
+          {
+            content: {
+              publicationStatus: PublicationStatus.PUBLISHED,
+              ...viewerContentWhere(profile),
+            },
+          },
           {
             episode: {
               season: {
-                series: { publicationStatus: PublicationStatus.PUBLISHED },
+                series: {
+                  publicationStatus: PublicationStatus.PUBLISHED,
+                  ...viewerContentWhere(profile),
+                },
               },
             },
           },
@@ -113,7 +128,10 @@ export async function getLibraryData(userId: string) {
     prisma.watchlistItem.findMany({
       where: {
         profileId: profile.id,
-        content: { publicationStatus: PublicationStatus.PUBLISHED },
+        content: {
+          publicationStatus: PublicationStatus.PUBLISHED,
+          ...viewerContentWhere(profile),
+        },
       },
       include: { content: { include: catalogueInclude } },
       orderBy: { createdAt: "desc" },
@@ -123,11 +141,19 @@ export async function getLibraryData(userId: string) {
         profileId: profile.id,
         positionSeconds: { gt: 0 },
         OR: [
-          { content: { publicationStatus: PublicationStatus.PUBLISHED } },
+          {
+            content: {
+              publicationStatus: PublicationStatus.PUBLISHED,
+              ...viewerContentWhere(profile),
+            },
+          },
           {
             episode: {
               season: {
-                series: { publicationStatus: PublicationStatus.PUBLISHED },
+                series: {
+                  publicationStatus: PublicationStatus.PUBLISHED,
+                  ...viewerContentWhere(profile),
+                },
               },
             },
           },

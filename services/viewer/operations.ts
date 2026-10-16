@@ -8,7 +8,15 @@ export async function getProfilesData(userId: string) {
   const [profiles, active] = await Promise.all([
     getPrisma().viewerProfile.findMany({
       where: { userId },
-      select: { id: true, name: true, avatar: true },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        image: true,
+        isKids: true,
+        autoplayNextEpisode: true,
+        preferSubtitles: true,
+      },
       orderBy: { createdAt: "asc" },
     }),
     getActiveProfile(userId),
@@ -38,13 +46,11 @@ function libraryTitle(content: Title): LibraryTitle {
     })),
     videoAssets: content.isPremium
       ? []
-      : content.videoAssets
-          .filter(isPermittedPlaybackAsset)
-          .map((a) => ({
-            id: a.id,
-            sourceType: a.sourceType,
-            isPlayable: true,
-          })),
+      : content.videoAssets.filter(isPermittedPlaybackAsset).map((a) => ({
+          id: a.id,
+          sourceType: a.sourceType,
+          isPlayable: true,
+        })),
   }
 }
 export async function getViewerLibrary(userId: string): Promise<LibraryData> {
@@ -55,6 +61,10 @@ export async function getViewerLibrary(userId: string): Promise<LibraryData> {
           id: data.profile.id,
           name: data.profile.name,
           avatar: data.profile.avatar,
+          image: data.profile.image,
+          isKids: data.profile.isKids,
+          autoplayNextEpisode: data.profile.autoplayNextEpisode,
+          preferSubtitles: data.profile.preferSubtitles,
         }
       : null,
     watchlist: data.watchlist.map((item) => ({

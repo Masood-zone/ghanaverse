@@ -1,10 +1,12 @@
 "use client"
 
-import { Menu, Search, UserRound } from "@/components/common/icons"
+import { Menu, Search } from "@/components/common/icons"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
+import { useSignOut } from "@/components/auth/use-sign-out"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
+import { PersonAvatar } from "@/components/catalogue/content-artwork"
 import { useAccount } from "@/services/viewer/account"
 
 const publicLinks = [
@@ -20,7 +22,7 @@ const memberLinks = [
 export function ViewerNavigation() {
   const { data: session } = authClient.useSession()
   const pathname = usePathname()
-  const router = useRouter()
+  const { signOut, pending: signingOut } = useSignOut()
   const links = session ? [...publicLinks, ...memberLinks] : publicLinks
   const user = session?.user
   const account = useAccount(Boolean(session))
@@ -31,11 +33,9 @@ export function ViewerNavigation() {
         ? "bg-amber-100 text-amber-900"
         : "text-slate-600 hover:bg-muted hover:text-foreground"
     )
-  async function signOut() {
-    await authClient.signOut()
-    router.push("/")
-    router.refresh()
-  }
+  const activeProfile = account.data?.profiles.find(
+    (profile) => profile.id === account.data.activeId
+  )
   const accountMenu = (
     <>
       {account.data?.hasRightsHolderReports ? (
@@ -50,6 +50,12 @@ export function ViewerNavigation() {
         <span className="px-3 py-1 text-xs font-semibold text-primary">
           {account.data.role.replaceAll("_", " ")}
         </span>
+      ) : null}
+      {activeProfile ? (
+        <p className="px-3 py-2 text-xs text-muted-foreground">
+          Watching as <strong>{activeProfile.name}</strong>
+          {activeProfile.isKids ? " · Kids" : ""}
+        </p>
       ) : null}
       <Link
         href="/profiles"
@@ -66,8 +72,9 @@ export function ViewerNavigation() {
       <button
         className="rounded-md px-3 py-2 text-left text-sm font-medium text-destructive hover:bg-red-50"
         onClick={signOut}
+        disabled={signingOut}
       >
-        Sign Out
+        {signingOut ? "Signing out…" : "Sign Out"}
       </button>
     </>
   )
@@ -92,16 +99,42 @@ export function ViewerNavigation() {
         </form>
         {session ? (
           <div className="flex items-center gap-3">
-            {user ? <UserIdentity user={user} compact /> : null}
+            {user ? (
+              <UserIdentity
+                user={{
+                  name: account.data?.name ?? user.name,
+                  email: user.email,
+                }}
+                compact
+                profileName={
+                  activeProfile
+                    ? `${activeProfile.name}${activeProfile.isKids ? " · Kids" : ""}`
+                    : undefined
+                }
+              />
+            ) : null}
             <details className="relative">
               <summary
                 aria-label="Account menu"
                 className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-full bg-amber-800 text-white"
               >
-                <UserRound className="h-4 w-4" />
+                <PersonAvatar
+                  name={activeProfile?.name ?? user?.name ?? "Account"}
+                  src={
+                    activeProfile ? activeProfile.image : account.data?.image
+                  }
+                  className="h-9 w-9 text-xs"
+                />
               </summary>
               <div className="absolute top-12 right-0 z-50 grid w-56 gap-1 rounded-lg border bg-card p-2 shadow-xl">
-                {user ? <UserIdentity user={user} /> : null}
+                {user ? (
+                  <UserIdentity
+                    user={{
+                      name: account.data?.name ?? user.name,
+                      email: user.email,
+                    }}
+                  />
+                ) : null}
                 {accountMenu}
               </div>
             </details>
@@ -120,6 +153,12 @@ export function ViewerNavigation() {
           </>
         )}
       </div>
+      {activeProfile ? (
+        <span className="ml-auto max-w-28 truncate text-xs font-semibold text-primary md:hidden">
+          {activeProfile.name}
+          {activeProfile.isKids ? " · Kids" : ""}
+        </span>
+      ) : null}
       <details className="relative ml-auto lg:hidden">
         <summary
           aria-label="Open navigation"
@@ -128,7 +167,14 @@ export function ViewerNavigation() {
           <Menu className="h-5 w-5" />
         </summary>
         <div className="absolute top-12 right-0 z-50 grid w-64 gap-1 rounded-lg border bg-card p-2 shadow-xl">
-          {user ? <UserIdentity user={user} /> : null}
+          {user ? (
+            <UserIdentity
+              user={{
+                name: account.data?.name ?? user.name,
+                email: user.email,
+              }}
+            />
+          ) : null}
           {links.map(([label, href]) => (
             <Link key={href} href={href} className={linkClass(href)}>
               {label}
@@ -161,9 +207,11 @@ export function ViewerNavigation() {
 function UserIdentity({
   user,
   compact = false,
+  profileName,
 }: {
   user: { name: string; email: string }
   compact?: boolean
+  profileName?: string
 }) {
   return (
     <div
@@ -174,6 +222,11 @@ function UserIdentity({
     >
       <p className="truncate text-sm font-bold text-foreground">{user.name}</p>
       <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+      {profileName ? (
+        <p className="truncate text-[10px] font-semibold text-primary">
+          Watching: {profileName}
+        </p>
+      ) : null}
     </div>
   )
 }

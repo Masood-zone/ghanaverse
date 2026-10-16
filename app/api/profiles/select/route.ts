@@ -4,10 +4,12 @@ import { requireUser } from "@/lib/auth/access"
 import { ACTIVE_PROFILE_COOKIE, requireOwnedProfile } from "@/lib/profiles"
 import { profileSelectionSchema } from "@/lib/platform-validation"
 import { routeError } from "@/lib/route-error"
+import { verifyOrigin } from "@/lib/viewer-photos"
 
 export async function POST(request: Request) {
   try {
     const { user } = await requireUser()
+    verifyOrigin(request)
     const { profileId } = profileSelectionSchema.parse(await request.json())
     const profile = await requireOwnedProfile(user.id, profileId)
     ;(await cookies()).set(ACTIVE_PROFILE_COOKIE, profile.id, {

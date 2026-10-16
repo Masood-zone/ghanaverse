@@ -1,38 +1,53 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
-export function getWatchlistStatus(contentId: string, signal?: AbortSignal) {
-  return api<{ saved: boolean }>(
-    `/watchlist?contentId=${encodeURIComponent(contentId)}`,
-    { signal }
-  )
+import { useAccount } from "./account"
+type SavedTitles = { profileId: string; contentIds: string[] }
+export function useWatchlist() {
+  const account = useAccount()
+  const profileId = account.data?.activeId
+  const key = ["viewer", "watchlist", account.data?.id, profileId]
+  return {
+    account,
+    profileId,
+    key,
+    query: useQuery({
+      queryKey: key,
+      queryFn: ({ signal }) =>
+        api<SavedTitles>(
+          `/watchlist?profileId=${encodeURIComponent(profileId!)}`,
+          { signal }
+        ),
+      enabled: Boolean(profileId),
+    }),
+  }
 }
-export function useWatchlistStatus(
+export function useWatchlistMutation(
   contentId: string,
-  initialSaved: boolean,
-  enabled: boolean
+  profileId?: string,
+  userId?: string
 ) {
-  return useQuery({
-    queryKey: ["viewer", "watchlist", contentId],
-    queryFn: ({ signal }) => getWatchlistStatus(contentId, signal),
-    initialData: { saved: initialSaved },
-    enabled,
-  })
-}
-export function useWatchlistMutation(contentId: string) {
   const client = useQueryClient()
   return useMutation({
+    mutationKey: ["watchlist-toggle", profileId, contentId],
     mutationFn: (saved: boolean) =>
       api("/watchlist", {
         method: saved ? "DELETE" : "PUT",
-        body: JSON.stringify({ contentId }),
+        body: JSON.stringify({ contentId, profileId }),
       }),
-    onMutate: () =>
-      client.cancelQueries({ queryKey: ["viewer", "watchlist", contentId] }),
-    onSuccess: (_, wasSaved) => {
-      client.setQueryData(["viewer", "watchlist", contentId], {
-        saved: !wasSaved,
-      })
-      return client.invalidateQueries({ queryKey: ["viewer", "library"] })
+    onSuccess: async (_, saved) => {
+      client.setQueryData<SavedTitles>(
+        ["viewer", "watchlist", userId, profileId],
+        (data) =>
+          data
+            ? {
+                ...data,
+                contentIds: saved
+                  ? data.contentIds.filter((id) => id !== contentId)
+                  : [...new Set([...data.contentIds, contentId])],
+              }
+            : data
+      )
+      await client.invalidateQueries({ queryKey: ["viewer", "library"] })
     },
   })
 }

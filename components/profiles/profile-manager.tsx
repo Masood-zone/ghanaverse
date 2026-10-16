@@ -1,9 +1,9 @@
 "use client"
 
 import { Check, Edit3, Plus, Trash2 } from "@/components/common/icons"
-import { useRouter } from "next/navigation"
+import { MaterialSymbol } from "@/components/common/MaterialSymbol"
 import { useState, useEffect, useRef } from "react"
-import { useForm, useWatch } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { z } from "zod"
 import { profileSchema } from "@/lib/platform-validation"
@@ -16,6 +16,10 @@ import {
 } from "@/services/viewer/profiles"
 import { toast } from "sonner"
 import type { ViewerProfile as Profile } from "@/types/viewer"
+import { PhotoUpload } from "@/components/account/photo-upload"
+import { PersonAvatar } from "@/components/catalogue/content-artwork"
+import { safeCallbackUrl } from "@/lib/auth/callback"
+import { announceProfileChange } from "@/lib/viewer-events"
 
 const avatars = [
   "adinkra",
@@ -24,6 +28,28 @@ const avatars = [
   "savannah",
   "highlife",
   "market",
+] as const
+const viewingPreferences = [
+  {
+    name: "isKids",
+    title: "Kids mode",
+    description:
+      "Show U and PG titles only. Profile switching is unrestricted; this is not a parental lock.",
+    icon: "family_restroom",
+  },
+  {
+    name: "autoplayNextEpisode",
+    title: "Autoplay next episode",
+    description: "A cancellable countdown appears when an episode ends.",
+    icon: "play_circle",
+  },
+  {
+    name: "preferSubtitles",
+    title: "Prefer subtitles when available",
+    description:
+      "YouTube retains its own CC controls and defaults when this is off.",
+    icon: "closed_caption",
+  },
 ] as const
 const palettes: Record<string, string> = {
   adinkra: "from-amber-700 to-orange-400",
@@ -34,9 +60,12 @@ const palettes: Record<string, string> = {
   market: "from-rose-700 to-orange-300",
 }
 
-export function ProfileManager() {
-  const router = useRouter(),
-    query = useViewerProfiles()
+export function ProfileManager({
+  callbackUrl = "/",
+}: {
+  callbackUrl?: string
+}) {
+  const query = useViewerProfiles()
   const profiles = query.data?.profiles ?? [],
     activeId = query.data?.activeId
   const [editing, setEditing] = useState<Profile | "new" | null>(null),
@@ -65,8 +94,8 @@ export function ProfileManager() {
                   ? setEditing(profile)
                   : selectMutation.mutate(profile.id, {
                       onSuccess: () => {
-                        router.push("/")
-                        router.refresh()
+                        announceProfileChange()
+                        window.location.assign(safeCallbackUrl(callbackUrl))
                       },
                       onError: (error) => toast.error(error.message),
                     })
@@ -76,7 +105,15 @@ export function ProfileManager() {
               <span
                 className={`grid aspect-square w-32 place-items-center overflow-hidden rounded-xl border-4 bg-gradient-to-br ${palettes[profile.avatar ?? "adinkra"]} text-4xl font-black text-white shadow-lg transition group-hover:-translate-y-1 group-hover:shadow-xl sm:w-36`}
               >
-                {profile.name.slice(0, 1).toUpperCase()}
+                {profile.image ? (
+                  <PersonAvatar
+                    name={profile.name}
+                    src={profile.image}
+                    className="h-full w-full rounded-none"
+                  />
+                ) : (
+                  profile.name.slice(0, 1).toUpperCase()
+                )}
               </span>
               {profile.id === activeId ? (
                 <span className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full bg-green-600 text-white shadow">
@@ -90,6 +127,11 @@ export function ProfileManager() {
               ) : null}
             </button>
             <h2 className="mt-4 font-bold">{profile.name}</h2>
+            {profile.isKids ? (
+              <span className="mt-2 inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-800">
+                Kids · U &amp; PG
+              </span>
+            ) : null}
             <p className="mt-1 text-xs text-muted-foreground">
               {profile.id === activeId ? "Active profile" : "Viewer profile"}
             </p>
@@ -99,7 +141,14 @@ export function ProfileManager() {
                 onClick={() => {
                   if (confirm(`Delete ${profile.name}?`))
                     deleteMutation.mutate(profile.id, {
-                      onSuccess: () => toast.success("Profile deleted"),
+                      onSuccess: () => {
+                        sessionStorage.setItem(
+                          "ghanaverse.notice",
+                          "Profile deleted."
+                        )
+                        announceProfileChange()
+                        window.location.reload()
+                      },
                       onError: (error) => toast.error(error.message),
                     })
                 }}
@@ -140,13 +189,16 @@ export function ProfileManager() {
           profile={editing}
           pending={saveMutation.isPending}
           onClose={() => setEditing(null)}
-          onSave={(name, avatar) =>
+          onSave={(values) =>
             saveMutation.mutate(
-              { profile: editing, name, avatar },
+              { profile: editing, values },
               {
                 onSuccess: () => {
                   setEditing(null)
                   toast.success("Profile saved")
+                  sessionStorage.setItem("ghanaverse.notice", "Profile saved.")
+                  announceProfileChange()
+                  window.location.reload()
                 },
                 onError: (error) => toast.error(error.message),
               }
@@ -167,7 +219,7 @@ function ProfileDialog({
   profile: Profile | "new"
   pending: boolean
   onClose: () => void
-  onSave: (name: string, avatar: string) => void
+  onSave: (values: z.output<typeof profileSchema>) => void
 }) {
   const form = useForm<
     z.input<typeof profileSchema>,
@@ -177,12 +229,18 @@ function ProfileDialog({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: profile === "new" ? "" : profile.name,
+      isKids: profile === "new" ? false : profile.isKids,
+      autoplayNextEpisode:
+        profile === "new" ? false : profile.autoplayNextEpisode,
+      preferSubtitles: profile === "new" ? false : profile.preferSubtitles,
       avatar:
         profileSchema.shape.avatar.safeParse(
           profile === "new" ? "adinkra" : profile.avatar
         ).data ?? "adinkra",
     },
   })
+  const [image, setImage] = useState(profile === "new" ? null : profile.image)
+  const [uploading, setUploading] = useState(false)
   const avatar = useWatch({ control: form.control, name: "avatar" }),
     dialog = useRef<HTMLDialogElement>(null)
   useEffect(() => {
@@ -196,19 +254,33 @@ function ProfileDialog({
       aria-labelledby="profile-dialog-title"
       onCancel={(event) => {
         event.preventDefault()
-        if (!pending) onClose()
+        if (!pending && !uploading) onClose()
       }}
-      className="fixed inset-0 m-auto h-fit max-h-[90vh] w-[calc(100%-2rem)] max-w-md overflow-auto rounded-xl bg-white p-6 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      className="fixed inset-0 m-auto h-fit max-h-[90vh] w-[calc(100%-2rem)] max-w-md overflow-auto rounded-xl bg-white p-6 text-left shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
     >
       <form
         noValidate
         onSubmit={form.handleSubmit((values) => {
-          if (!pending) onSave(values.name, values.avatar)
+          if (!pending && !uploading) onSave(values)
         })}
       >
         <h2 id="profile-dialog-title" className="text-2xl font-extrabold">
           {profile === "new" ? "Add Profile" : "Edit Profile"}
         </h2>
+        <div className="mt-5">
+          <PhotoUpload
+            target="profile"
+            profileId={profile === "new" ? undefined : profile.id}
+            name={profile === "new" ? "New profile" : profile.name}
+            image={image}
+            disabled={pending}
+            onBusy={setUploading}
+            onChange={(id, url) => {
+              form.setValue("photoAssetId", id, { shouldDirty: true })
+              setImage(url)
+            }}
+          />
+        </div>
         <label className="mt-6 block text-sm font-bold">
           Profile name
           <input
@@ -230,9 +302,11 @@ function ProfileDialog({
               <button
                 type="button"
                 key={item}
-                onClick={() =>
+                onClick={() => {
                   form.setValue("avatar", item, { shouldDirty: true })
-                }
+                  form.setValue("photoAssetId", null, { shouldDirty: true })
+                  setImage(null)
+                }}
                 aria-label={item}
                 aria-pressed={avatar === item}
                 className={`aspect-square rounded-md bg-gradient-to-br ${palettes[item]} ${avatar === item ? "ring-2 ring-primary ring-offset-2" : ""}`}
@@ -240,17 +314,77 @@ function ProfileDialog({
             ))}
           </div>
         </fieldset>
+        <fieldset className="mt-7 min-w-0">
+          <legend className="text-sm font-bold">Viewing preferences</legend>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Make this profile feel like you.
+          </p>
+          <div className="mt-3 divide-y overflow-hidden rounded-xl border bg-muted/30">
+            {viewingPreferences.map(({ name, title, description, icon }) => (
+              <label
+                key={name}
+                className="flex cursor-pointer items-start gap-3 p-4 transition-colors hover:bg-muted/70 has-[:disabled]:cursor-wait has-[:disabled]:opacity-60 has-[:focus-visible]:bg-muted/70"
+              >
+                <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/10 text-primary sm:inline-flex">
+                  <MaterialSymbol icon={icon} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span
+                    id={`preference-${name}-label`}
+                    className="block text-sm leading-5 font-semibold"
+                  >
+                    {title}
+                  </span>
+                  <span
+                    id={`preference-${name}-description`}
+                    className="mt-1 block text-xs leading-5 text-muted-foreground"
+                  >
+                    {description}
+                  </span>
+                </span>
+                <span className="relative mt-0.5 inline-flex shrink-0">
+                  <Controller
+                    name={name}
+                    control={form.control}
+                    render={({ field }) => (
+                      <input
+                        type="checkbox"
+                        name={field.name}
+                        ref={field.ref}
+                        checked={Boolean(field.value)}
+                        onChange={(event) =>
+                          field.onChange(event.target.checked)
+                        }
+                        onBlur={field.onBlur}
+                        aria-labelledby={`preference-${name}-label`}
+                        aria-describedby={`preference-${name}-description`}
+                        disabled={pending || uploading}
+                        className="peer sr-only"
+                      />
+                    )}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex h-6 w-11 items-center rounded-full bg-slate-300 p-0.5 transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-checked:[&>span]:translate-x-5"
+                  >
+                    <span className="h-5 w-5 rounded-full bg-white shadow-sm transition-transform motion-reduce:transition-none" />
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="mt-7 flex justify-end gap-3">
           <button
             type="button"
-            disabled={pending}
+            disabled={pending || uploading}
             onClick={onClose}
             className="rounded-md border px-4 py-2 font-semibold"
           >
             Cancel
           </button>
           <button
-            disabled={pending}
+            disabled={pending || uploading}
             className="rounded-md bg-primary px-4 py-2 font-bold text-white disabled:opacity-60"
           >
             {pending ? "Saving…" : "Save Profile"}

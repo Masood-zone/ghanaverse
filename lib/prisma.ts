@@ -9,6 +9,7 @@ export function sqlTable(
     | "PlaybackSession"
     | "PlaybackSample"
     | "ViewerProfile"
+    | "User"
 ) {
   const schema =
     new URL(process.env.DATABASE_URL!).searchParams.get("schema") ?? "public"
