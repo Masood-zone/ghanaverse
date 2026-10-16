@@ -61,9 +61,10 @@ export function isPermittedPlaybackAsset(asset: {
   sourceType: string
   playbackUrl: unknown
   isPlayable: boolean
+  storedObject?: { state: string } | null
 }) {
   return (
     asset.isPlayable &&
-    Boolean(resolvePlaybackSource(asset.sourceType, asset.playbackUrl))
+    (asset.sourceType === "MANAGED" ? asset.storedObject?.state === "READY" : Boolean(resolvePlaybackSource(asset.sourceType, asset.playbackUrl)))
   )
 }

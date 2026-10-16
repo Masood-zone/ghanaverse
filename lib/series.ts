@@ -2,7 +2,8 @@ import { isPermittedPlaybackAsset } from "@/lib/image-policy"
 export type PlaybackCandidate = {
   id: string
   sourceType: string
-  playbackUrl: string
+  playbackUrl: string | null
+  storedObject?: { state: string } | null
   isPlayable: boolean
 }
 export function selectPlaybackAsset<T extends PlaybackCandidate>(assets: T[]) {

@@ -1,9 +1,9 @@
 "use client"
 import { useAdminOptions } from "@/services/admin/metadata"
 import { useAdminContentRecord } from "@/services/admin/content"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useForm, FormProvider, useFieldArray, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { z } from "zod"
@@ -22,6 +22,8 @@ import { toOptionalNumber } from "@/lib/validation/form-values"
 import type { AdminOptions, EditorRecord } from "@/types/admin"
 import { Heading, QueryState, Status, FormError } from "./shared"
 import { SeriesMediaContent } from "./series-media-content"
+import { ContentScope, useContentScope } from "./content-scope"
+import { selectPlaybackAsset } from "@/lib/series"
 type Input = z.input<typeof contentMutationSchema>
 type Output = z.output<typeof contentMutationSchema>
 function defaults(record?: EditorRecord): Input {
@@ -58,10 +60,11 @@ function defaults(record?: EditorRecord): Input {
   }
 }
 const tabs = [
-  ["general", "General"],
-  ["metadata", "Classification & Meta"],
-  ["people", "People & Production"],
-  ["rights", "Rights"],
+  ["overview", "Overview"],
+  ["artwork", "Artwork"],
+  ["episodes", "Episodes"],
+  ["video", "Video & Trailer"],
+  ["people", "People & Rights"],
   ["publishing", "Publishing"],
 ] as const
 function EditorForm({
@@ -72,7 +75,16 @@ function EditorForm({
   options: AdminOptions
 }) {
   const router = useRouter()
-  const [active, setActive] = useState<(typeof tabs)[number][0]>("general")
+  const scope = useContentScope(),
+    search = useSearchParams(),
+    pathname = usePathname()
+  const section = search.get("section")
+  const active = tabs.find(([id]) => id === section)?.[0] ?? "overview"
+  function setActive(id: (typeof tabs)[number][0]) {
+    const params = new URLSearchParams(search.toString())
+    params.set("section", id)
+    window.history.pushState(null, "", `${pathname}?${params}`)
+  }
   const form = useForm<Input, unknown, Output>({
     resolver: zodResolver(contentMutationSchema),
     defaultValues: defaults(record),
@@ -86,6 +98,9 @@ function EditorForm({
   const backdropUrl = useWatch({ control: form.control, name: "backdropUrl" })
   const published = record?.publicationStatus === "PUBLISHED"
   const dirty = form.formState.isDirty
+  const visibleTabs = tabs.filter(
+    ([id]) => id !== "episodes" || type === "SERIES"
+  )
   useEffect(() => {
     if (!dirty) return
     const listener = (event: BeforeUnloadEvent) => {
@@ -120,6 +135,9 @@ function EditorForm({
         method: record ? "PATCH" : "POST",
         body: {
           ...values,
+          ...(scope === "creator"
+            ? { isFeatured: undefined, isPremium: undefined }
+            : {}),
           publicationStatus: record?.publicationStatus ?? "DRAFT",
         },
       })
@@ -128,7 +146,7 @@ function EditorForm({
         slug: form.getValues("slug") || undefined,
       })
       toast.success("Title saved")
-      if (!record) router.replace(`/admin/content/${saved.id}`)
+      if (!record) router.replace(`/${scope}/content/${saved.id}`)
     } catch (error) {
       if (error instanceof ApiClientError && error.fieldErrors) {
         for (const [name, messages] of Object.entries(error.fieldErrors))
@@ -139,10 +157,10 @@ function EditorForm({
   }
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="sticky top-16 z-20 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur">
         <Link
           className="text-xs font-semibold text-primary"
-          href="/admin/content"
+          href={`/${scope}/content`}
         >
           ← Back to Content Library
         </Link>
@@ -151,7 +169,7 @@ function EditorForm({
             <>
               <Link
                 className="gv-action secondary"
-                href={`/admin/content/${record.id}/preview`}
+                href={`/${scope}/content/${record.id}/preview`}
               >
                 Preview on GhanaVerse
               </Link>
@@ -195,6 +213,10 @@ function EditorForm({
                 ? "Save Changes"
                 : "Save Draft"}
           </button>
+          <span className="text-xs font-semibold" role="status">
+            {dirty ? "Unsaved changes" : "Saved"} ·{" "}
+            {record?.title ?? "New title"}
+          </span>
         </div>
       </div>
       <Heading
@@ -214,13 +236,34 @@ function EditorForm({
         </p>
       ) : null}
       <FormProvider {...form}>
-        <form id="content-editor" noValidate onSubmit={form.handleSubmit(save)}>
+        <form
+          id="content-editor"
+          noValidate
+          onSubmit={form.handleSubmit(save, (errors) => {
+            const field = Object.keys(errors)[0] as keyof Input | undefined
+            const target =
+              field && ["posterUrl", "backdropUrl"].includes(field)
+                ? "artwork"
+                : field &&
+                    [
+                      "credits",
+                      "productionCompanyId",
+                      "rightsHolderId",
+                      "mediaRights",
+                      "attributionNotes",
+                    ].includes(field)
+                  ? "people"
+                  : "overview"
+            setActive(target)
+            if (field) requestAnimationFrame(() => form.setFocus(field))
+          })}
+        >
           <div
             role="tablist"
             aria-label="Content sections"
             className="mb-6 flex gap-1 overflow-x-auto rounded-lg bg-white p-2"
           >
-            {tabs.map(([id, label]) => (
+            {visibleTabs.map(([id, label]) => (
               <button
                 key={id}
                 id={`tab-${id}`}
@@ -230,21 +273,23 @@ function EditorForm({
                 tabIndex={active === id ? 0 : -1}
                 type="button"
                 onKeyDown={(event) => {
-                  const index = tabs.findIndex((tab) => tab[0] === id)
+                  const index = visibleTabs.findIndex((tab) => tab[0] === id)
                   const next =
                     event.key === "ArrowRight"
-                      ? (index + 1) % tabs.length
+                      ? (index + 1) % visibleTabs.length
                       : event.key === "ArrowLeft"
-                        ? (index + tabs.length - 1) % tabs.length
+                        ? (index + visibleTabs.length - 1) % visibleTabs.length
                         : event.key === "Home"
                           ? 0
                           : event.key === "End"
-                            ? tabs.length - 1
+                            ? visibleTabs.length - 1
                             : -1
                   if (next >= 0) {
                     event.preventDefault()
-                    setActive(tabs[next][0])
-                    document.getElementById(`tab-${tabs[next][0]}`)?.focus()
+                    setActive(visibleTabs[next][0])
+                    document
+                      .getElementById(`tab-${visibleTabs[next][0]}`)
+                      ?.focus()
                   }
                 }}
                 onClick={() => setActive(id)}
@@ -255,8 +300,15 @@ function EditorForm({
             ))}
           </div>
           <fieldset disabled={published || mutation.isPending}>
-            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-              <div className="gv-panel space-y-5">
+            <div className="grid items-start gap-6">
+              <div
+                className="gv-panel space-y-5"
+                hidden={
+                  active === "artwork" ||
+                  active === "episodes" ||
+                  active === "video"
+                }
+              >
                 {Object.keys(form.formState.errors).length ? (
                   <div
                     role="alert"
@@ -268,10 +320,10 @@ function EditorForm({
                   </div>
                 ) : null}
                 <section
-                  hidden={active !== "general"}
-                  id="panel-general"
+                  hidden={active !== "overview"}
+                  id="panel-overview"
                   role="tabpanel"
-                  aria-labelledby="tab-general"
+                  aria-labelledby="tab-overview"
                   className="space-y-5"
                 >
                   <h2 className="text-xl font-bold text-primary">
@@ -382,10 +434,10 @@ function EditorForm({
                   </div>
                 </section>
                 <section
-                  hidden={active !== "metadata"}
+                  hidden={active !== "overview"}
                   id="panel-metadata"
                   role="tabpanel"
-                  aria-labelledby="tab-metadata"
+                  aria-labelledby="tab-overview"
                   className="space-y-5"
                 >
                   <h2 className="text-xl font-bold text-primary">
@@ -535,10 +587,10 @@ function EditorForm({
                   </button>
                 </section>
                 <section
-                  hidden={active !== "rights"}
+                  hidden={active !== "people"}
                   id="panel-rights"
                   role="tabpanel"
-                  aria-labelledby="tab-rights"
+                  aria-labelledby="tab-people"
                   className="space-y-5"
                 >
                   <h2 className="text-xl font-bold text-primary">
@@ -550,6 +602,7 @@ function EditorForm({
                       aria-label="Rights holder"
                       className="gv-field"
                       {...form.register("rightsHolderId")}
+                      disabled={scope === "creator" && Boolean(record)}
                     >
                       <option value="">Not assigned</option>
                       {options.rightsHolders.map((item) => (
@@ -557,7 +610,9 @@ function EditorForm({
                           {item.name}
                           {item.memberships?.length
                             ? ` — ${item.memberships.map((m) => m.user.name).join(", ")}`
-                            : " (no linked account)"}
+                            : scope === "admin"
+                              ? " (no linked account)"
+                              : ""}
                         </option>
                       ))}
                     </select>
@@ -593,13 +648,25 @@ function EditorForm({
                   <h2 className="text-xl font-bold text-primary">
                     Publication Readiness
                   </h2>
-                  <label className="flex gap-2 text-sm">
-                    <input type="checkbox" {...form.register("isFeatured")} />
-                    Feature this title in the catalogue
-                  </label>
+                  {scope === "admin" ? (
+                    <label className="flex gap-2 text-sm">
+                      <input type="checkbox" {...form.register("isFeatured")} />
+                      Feature this title in the catalogue
+                    </label>
+                  ) : null}
                   <p className="text-xs leading-6 text-slate-600">
                     Publication uses saved data. Playback is optional; viewers
                     can discover catalogue-only entries.
+                  </p>
+                  <p className="text-sm font-semibold">
+                    Playback:{" "}
+                    {record
+                      ? record.contentType === "SERIES"
+                        ? `${record.seasons.flatMap((s) => s.episodes).filter((e) => selectPlaybackAsset(e.videoAssets)).length} episodes ready`
+                        : selectPlaybackAsset(record.videoAssets)
+                          ? "Ready"
+                          : "No enabled source"
+                      : "Save the title first"}
                   </p>
                   {issues.length ? (
                     <ul className="list-inside list-disc space-y-2 text-xs text-amber-900">
@@ -614,13 +681,20 @@ function EditorForm({
                   )}
                 </section>
               </div>
-              <aside className="gv-panel space-y-6">
+              <aside
+                className="gv-panel space-y-6"
+                hidden={active !== "artwork"}
+                id="panel-artwork"
+                role="tabpanel"
+                aria-labelledby="tab-artwork"
+              >
                 <h2 className="text-xl font-bold text-primary">Key Artwork</h2>
                 <FileUpload
                   label="Cinematic backdrop (16:9)"
                   purpose="backdrop"
+                  contentId={record?.id}
                   value={backdropUrl}
-                  disabled={published}
+                  disabled={published || (scope === "creator" && !record)}
                   onFilesUploaded={(asset) =>
                     form.setValue("backdropUrl", asset?.secureUrl ?? null, {
                       shouldDirty: true,
@@ -630,8 +704,9 @@ function EditorForm({
                 <FileUpload
                   label="Vertical poster (2:3)"
                   purpose="poster"
+                  contentId={record?.id}
                   value={posterUrl}
-                  disabled={published}
+                  disabled={published || (scope === "creator" && !record)}
                   onFilesUploaded={(asset) =>
                     form.setValue("posterUrl", asset?.secureUrl ?? null, {
                       shouldDirty: true,
@@ -644,7 +719,13 @@ function EditorForm({
         </form>
       </FormProvider>
       {record ? (
-        <SeriesMediaContent record={record} disabled={published} />
+        <div hidden={active !== "episodes" && active !== "video"}>
+          <SeriesMediaContent
+            record={record}
+            disabled={published || dirty}
+            section={active === "episodes" ? "episodes" : "video"}
+          />
+        </div>
       ) : (
         <div className="gv-panel mt-6 text-sm">
           Save the draft to manage trailers, seasons, episodes, and playback
@@ -662,7 +743,7 @@ function EditorForm({
                 mutation.mutate(
                   { path: `content/${record.id}`, method: "DELETE" },
                   {
-                    onSuccess: () => router.push("/admin/content"),
+                    onSuccess: () => router.push(`/${scope}/content`),
                     onError: (e) => toast.error(e.message),
                   }
                 )
@@ -675,7 +756,7 @@ function EditorForm({
     </>
   )
 }
-export function ContentEditorContent({ id }: { id: string }) {
+function EditorLoader({ id }: { id: string }) {
   const options = useAdminOptions()
   const query = useAdminContentRecord(id)
   const pending = options.isPending || (id !== "new" && query.isPending)
@@ -698,4 +779,17 @@ export function ContentEditorContent({ id }: { id: string }) {
       record={id === "new" ? undefined : query.data}
     />
   ) : null
+}
+export function ContentEditorContent({
+  id,
+  scope = "admin",
+}: {
+  id: string
+  scope?: "admin" | "creator"
+}) {
+  return (
+    <ContentScope value={scope}>
+      <EditorLoader id={id} />
+    </ContentScope>
+  )
 }

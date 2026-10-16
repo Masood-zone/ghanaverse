@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { Toaster, toast } from "sonner"
 import { PROFILE_CHANGED_EVENT } from "@/lib/viewer-events"
 import { SIGNING_OUT_KEY } from "@/components/auth/use-sign-out"
+import { UploadWorkspace } from "@/components/uploads/upload-workspace"
 export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter(),
     pathname = usePathname(),
@@ -70,6 +71,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       {children}
+      <UploadWorkspace />
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
   )

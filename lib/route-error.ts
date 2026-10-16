@@ -2,15 +2,8 @@ import { z } from "zod"
 import { apiError } from "@/lib/api-response"
 import { AccessError } from "@/lib/auth/access"
 
-export class PlatformError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message: string
-  ) {
-    super(message)
-  }
-}
+import { PlatformError } from "@/lib/platform-error"
+export { PlatformError } from "@/lib/platform-error"
 
 export function routeError(
   error: unknown,

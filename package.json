@@ -24,9 +24,15 @@
     "test:prepare": "tsx scripts/test-database.ts",
     "qa:browser": "tsx scripts/browser-qa.ts",
     "qa:viewer": "tsx scripts/viewer-qa.ts",
-    "qa:rights": "tsx scripts/rights-playback-qa.ts"
+    "qa:rights": "tsx scripts/rights-playback-qa.ts",
+    "video:storage:check": "node --conditions=react-server --import tsx scripts/video-storage.ts check",
+    "video:storage:status": "node --conditions=react-server --import tsx scripts/video-storage.ts status",
+    "video:storage:cleanup": "node --conditions=react-server --import tsx scripts/video-storage.ts cleanup",
+    "qa:video": "tsx scripts/video-browser-qa.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "@better-auth/prisma-adapter": "^1.7.4",
     "@hookform/resolvers": "^5.9.1",
     "@prisma/adapter-pg": "^7.10.0",
@@ -37,7 +43,9 @@
     "cloudinary": "^2.11.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
+    "hash-wasm": "^4.12.0",
     "lucide-react": "^1.45.0",
+    "mp4box": "^2.4.1",
     "next": "16.3.4",
     "pg": "^8.23.0",
     "react": "19.2.8",

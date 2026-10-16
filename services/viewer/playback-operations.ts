@@ -17,6 +17,7 @@ export async function permittedAsset(id: string) {
   const asset = await getPrisma().videoAsset.findUnique({
     where: { id },
     include: {
+      storedObject: { select: { state: true } },
       content: true,
       episode: { include: { season: { include: { series: true } } } },
     },

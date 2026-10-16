@@ -275,7 +275,9 @@ model VideoAsset {
   contentId        String?
   episodeId        String?
   sourceType       VideoSourceType
-  playbackUrl      String
+  playbackUrl      String?
+  storedObjectId   String?           @unique
+  storedObject     StoredVideoObject? @relation(fields: [storedObjectId], references: [id], onDelete: Restrict)
   durationSeconds  Int?
   licenseType      MediaRights
   isPlayable       Boolean           @default(false)
@@ -439,4 +441,71 @@ model ArtworkAsset {
   bytes        Int
   uploadedById String
   createdAt    DateTime @default(now())
+}
+
+// Provider identifiers are private. Reservations survive failed provider operations.
+model VideoUploadSession {
+  id              String   @id
+  idempotencyKey  String   @unique
+  actorId         String
+  contentId       String
+  episodeId       String?
+  destination     String
+  filename        String
+  fileSize        BigInt
+  lastModified    Float
+  fingerprint     String
+  licenseType     MediaRights
+  mediaMetadata   Json
+  endpoint        String
+  bucket          String
+  objectKey       String   @unique
+  providerUploadId String?
+  status          String   @default("INITIALIZING")
+  expiresAt       DateTime
+  leaseToken      String?
+  leaseUntil      DateTime?
+  lastError       String?
+  assetId         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  reservation     VideoStorageReservation?
+  parts           VideoUploadPart[]
+  storedObject    StoredVideoObject?
+
+  @@index([contentId, status])
+  @@index([expiresAt, status])
+}
+
+model VideoUploadPart {
+  sessionId String
+  partNumber Int
+  md5       String
+  session   VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  @@id([sessionId, partNumber])
+}
+
+model VideoStorageReservation {
+  sessionId String @id
+  bytes BigInt
+  releasedAt DateTime?
+  session VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+}
+
+model StoredVideoObject {
+  id String @id
+  sessionId String @unique
+  endpoint String
+  bucket String
+  objectKey String @unique
+  bytes BigInt
+  etag String
+  state String @default("READY")
+  metadata Json
+  lastError String?
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  session VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  asset VideoAsset?
+  @@index([state])
 }

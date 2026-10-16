@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { requireAdmin } from "@/lib/auth/access"
 import { getPrisma } from "@/lib/prisma"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
+import { AssetPreview } from "@/components/uploads/asset-preview"
 export default async function Preview({
   params,
 }: {
@@ -13,13 +14,14 @@ export default async function Preview({
   const content = await getPrisma().content.findUnique({
     where: { id },
     include: {
+      videoAssets: true,
       genres: { include: { genre: true } },
       languages: { include: { language: true } },
       credits: { include: { person: true } },
       productionCompany: true,
       seasons: {
         orderBy: { seasonNumber: "asc" },
-        include: { episodes: { orderBy: { episodeNumber: "asc" } } },
+        include: { episodes: { orderBy: { episodeNumber: "asc" }, include: { videoAssets: true } } },
       },
     },
   })
@@ -60,6 +62,7 @@ export default async function Preview({
         </div>
       </section>
       <div className="gv-panel mt-6">
+        <div className="mb-5 flex flex-wrap gap-4">{content.videoAssets.map((asset) => <AssetPreview key={asset.id} id={asset.id} label={`Preview ${asset.sourceType}`} />)}</div>
         <h2 className="text-xl font-bold">Story</h2>
         <p className="mt-4 leading-7 whitespace-pre-wrap">
           {content.description}
@@ -90,6 +93,7 @@ export default async function Preview({
             {season.episodes.map((episode) => (
               <p className="mt-2 rounded bg-white p-3 text-sm" key={episode.id}>
                 {episode.episodeNumber}. {episode.title}
+                <span className="ml-4 inline-flex gap-3">{episode.videoAssets.map((asset) => <AssetPreview key={asset.id} id={asset.id} label={`Preview ${asset.sourceType}`} />)}</span>
               </p>
             ))}
           </div>

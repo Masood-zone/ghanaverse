@@ -18,6 +18,7 @@ import {
 import { extractYouTubeVideoId } from "@/lib/youtube"
 import { resolvePlaybackSource } from "@/lib/playback-source"
 import { artwork, editable } from "./guards"
+import { prepareMediaDeletion } from "@/services/video/storage"
 export async function mutateMedia({
   tx,
   id,
@@ -115,6 +116,10 @@ export async function mutateMedia({
       },
     })
   } else if (kind === "seasons") {
+    if (method === "DELETE") {
+      const episodes = await tx.episode.findMany({ where: { seasonId: id }, select: { id: true } })
+      await prepareMediaDeletion(tx, contentId, episodes.map((e) => e.id))
+    }
     if (method !== "DELETE") {
       const input = seasonSchema.parse(raw)
       if (
@@ -140,7 +145,10 @@ export async function mutateMedia({
             data: seasonSchema.parse(raw),
           })
   } else if (kind === "episodes") {
-    if (method === "DELETE") result = await tx.episode.delete({ where: { id } })
+    if (method === "DELETE") {
+      await prepareMediaDeletion(tx, contentId, [id])
+      result = await tx.episode.delete({ where: { id } })
+    }
     else {
       const input = episodeSchema.parse(raw)
       const episode = await tx.episode.findUniqueOrThrow({ where: { id } })
@@ -171,10 +179,14 @@ export async function mutateMedia({
     (kind === "content" && child === "video-assets") ||
     kind === "video-assets"
   ) {
-    if (method === "DELETE")
+    if (method === "DELETE") {
+      const asset = await tx.videoAsset.findUnique({ where: { id } })
+      if (asset?.storedObjectId) await tx.storedVideoObject.update({ where: { id: asset.storedObjectId }, data: { state: "PENDING_DELETE" } })
       result = await tx.videoAsset.delete({ where: { id } })
-    else {
+    } else {
       const input = videoAssetSchema.parse(raw)
+      if (kind === "video-assets" && (await tx.videoAsset.findUnique({ where: { id } }))?.sourceType === "MANAGED")
+        throw new PlatformError(409, "MANAGED_UPLOAD_REQUIRED", "Use the video uploader to replace managed files, or the source selector to enable playback.")
       episodeId = input.episodeId ?? undefined
       if (
         episodeId &&
@@ -231,6 +243,7 @@ export async function mutateMedia({
         contentId: episodeId ? null : contentId,
         episodeId: episodeId ?? null,
       }
+      if (input.isPlayable) await tx.videoAsset.updateMany({ where: episodeId ? { episodeId } : { contentId }, data: { isPlayable: false } })
       result =
         kind === "video-assets"
           ? await tx.videoAsset.update({ where: { id }, data })

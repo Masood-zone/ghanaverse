@@ -13,6 +13,7 @@ import { resolvePlaybackSource } from "@/lib/playback-source"
 import { usePlaybackTracking } from "./use-playback-tracking"
 import { YouTubePlayer } from "./youtube-player"
 import { PROFILE_CHANGED_EVENT } from "@/lib/viewer-events"
+import { videoRequest } from "@/lib/video/client-api"
 export type VideoPlayerProps = {
   assetId: string
   src: string
@@ -27,6 +28,8 @@ export type VideoPlayerProps = {
 }
 type Props = VideoPlayerProps
 export function VideoPlayer(props: Props) {
+  if (props.sourceType === "MANAGED")
+    return <NativePlayer key={props.assetId} {...props} />
   const source = resolvePlaybackSource(props.sourceType, props.src)
   if (!source)
     return (
@@ -52,7 +55,8 @@ export function VideoPlayer(props: Props) {
 }
 function NativePlayer({
   assetId,
-  src,
+  src: initialSource,
+  sourceType,
   poster,
   initialPosition = 0,
   profileId,
@@ -62,6 +66,12 @@ function NativePlayer({
   onPlaybackStarted,
 }: Props) {
   const ref = useRef<HTMLVideoElement>(null)
+  const [src, setSource] = useState(initialSource)
+  const expiry = useRef(0),
+    renewal = useRef<Promise<void> | null>(null)
+  const restore = useRef<{ position: number; playing: boolean } | null>(null)
+  const lastRenewed = useRef(0)
+  const playIntent = useRef(false)
   const [playing, setPlaying] = useState(false),
     [muted, setMuted] = useState(false)
   const [position, setPosition] = useState(initialPosition),
@@ -75,6 +85,40 @@ function NativePlayer({
   const [hasCaptions, setHasCaptions] = useState(false)
   const [captions, setCaptions] = useState(preferSubtitles)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
+  const renew = useCallback(() => {
+    if (renewal.current) return renewal.current
+    const video = ref.current
+    restore.current = {
+      position: video && expiry.current ? video.currentTime : initialPosition,
+      playing: playIntent.current || Boolean(video && !video.paused),
+    }
+    renewal.current = videoRequest<{ url: string; expiresAt: string }>(
+      `playback/assets/${assetId}/source`,
+      "POST",
+      { profileId }
+    )
+      .then((source) => {
+        expiry.current = Date.parse(source.expiresAt)
+        lastRenewed.current = Date.now()
+        setSource(source.url)
+        setError("")
+      })
+      .catch((error: unknown) => {
+        setLoading(false)
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Playback authorization failed."
+        )
+      })
+      .finally(() => {
+        renewal.current = null
+      })
+    return renewal.current
+  }, [assetId, profileId, initialPosition])
+  useEffect(() => {
+    if (sourceType === "MANAGED") void renew()
+  }, [sourceType, renew])
   useEffect(() => {
     const video = ref.current
     if (!video) return
@@ -175,7 +219,7 @@ function NativePlayer({
       <div className="relative aspect-video bg-black">
         <video
           ref={attach}
-          src={src}
+          src={src || undefined}
           poster={poster ?? undefined}
           preload="metadata"
           playsInline
@@ -185,8 +229,12 @@ function NativePlayer({
               length = Number.isFinite(video.duration) ? video.duration : 0
             setDuration(length)
             setLoading(false)
-            if (initialPosition > 0 && initialPosition < length)
-              video.currentTime = initialPosition
+            const resume = restore.current
+            const target = resume?.position ?? initialPosition
+            if (target > 0 && target < length) video.currentTime = target
+            restore.current = null
+            if (resume?.playing)
+              void video.play().catch(() => setAutoplayBlocked(true))
           }}
           onTimeUpdate={(event) => setPosition(event.currentTarget.currentTime)}
           onDurationChange={(event) => {
@@ -194,6 +242,7 @@ function NativePlayer({
             if (Number.isFinite(length) && length > 0) setDuration(length)
           }}
           onPlaying={(event) => {
+            playIntent.current = true
             onPlaybackStarted?.()
             setAutoplayBlocked(false)
             setPlaying(true)
@@ -206,17 +255,23 @@ function NativePlayer({
             setLoading(true)
             sample(event.currentTarget, false)
           }}
-          onSeeking={(event) => sample(event.currentTarget, false, true)}
+          onSeeking={(event) => {
+            sample(event.currentTarget, false, true)
+            if (sourceType === "MANAGED" && Date.now() > expiry.current - 15000)
+              void renew()
+          }}
           onSeeked={(event) =>
             sample(event.currentTarget, !event.currentTarget.paused)
           }
           onCanPlay={() => setLoading(false)}
           onPause={(event) => {
+            if (!renewal.current) playIntent.current = false
             setPlaying(false)
             sample(event.currentTarget, false)
             void flush()
           }}
           onEnded={(event) => {
+            playIntent.current = false
             setPlaying(false)
             sample(event.currentTarget, false)
             void flush(true).then((saved) => {
@@ -227,6 +282,13 @@ function NativePlayer({
             setPlaying(false)
             setLoading(false)
             sample(event.currentTarget, false)
+            if (
+              sourceType === "MANAGED" &&
+              Date.now() - lastRenewed.current > 30000
+            ) {
+              void renew()
+              return
+            }
             setError(
               "The video source is unavailable or unsupported. Use a direct video-file URL rather than a webpage."
             )
@@ -346,7 +408,8 @@ function NativePlayer({
             onClick={() => {
               setError("")
               setLoading(true)
-              ref.current?.load()
+              if (sourceType === "MANAGED") void renew()
+              else ref.current?.load()
             }}
           >
             Retry

@@ -32,6 +32,7 @@ export default async function WatchPage({
   const asset = await getPrisma().videoAsset.findUnique({
     where: { id },
     include: {
+      storedObject: { select: { state: true } },
       content: { include: catalogueInclude },
       episode: {
         include: {
@@ -99,7 +100,7 @@ export default async function WatchPage({
             player={{
               assetId: asset.id,
               sourceType: asset.sourceType,
-              src: asset.playbackUrl,
+              src: asset.playbackUrl ?? "",
               poster: asset.episode?.thumbnailUrl ?? content.backdropUrl,
               initialPosition: progress?.completed
                 ? 0
@@ -116,7 +117,7 @@ export default async function WatchPage({
             key={`${profile?.id}:${asset.id}`}
             assetId={asset.id}
             sourceType={asset.sourceType}
-            src={asset.playbackUrl}
+            src={asset.playbackUrl ?? ""}
             poster={content.backdropUrl}
             initialPosition={
               progress?.completed ? 0 : (progress?.positionSeconds ?? 0)

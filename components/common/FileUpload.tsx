@@ -11,12 +11,14 @@ export default function FileUpload({
   onFilesUploaded,
   label,
   disabled = false,
+  contentId,
 }: {
   value?: string | null
   purpose: UploadPurpose
   onFilesUploaded: (file: UploadedArtwork | null) => void
   label: string
   disabled?: boolean
+  contentId?: string
 }) {
   const mutation = useUploadFile()
   const { getRootProps, getInputProps, isDragActive, fileRejections } =
@@ -32,7 +34,7 @@ export default function FileUpload({
       onDropAccepted: (files) => {
         if (files[0])
           mutation.mutate(
-            { file: files[0], purpose },
+            { file: files[0], purpose, contentId },
             { onSuccess: onFilesUploaded }
           )
       },

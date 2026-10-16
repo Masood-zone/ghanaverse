@@ -12,7 +12,7 @@ const progressInclude = {
   content: { include: catalogueInclude },
   episode: {
     include: {
-      videoAssets: true,
+      videoAssets: { include: { storedObject: { select: { state: true } } } },
       season: { include: { series: { include: catalogueInclude } } },
     },
   },

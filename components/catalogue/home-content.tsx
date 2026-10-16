@@ -11,7 +11,8 @@ const allowedAsset = (content: {
     id: string
     isPlayable: boolean
     sourceType: string
-    playbackUrl: string
+    playbackUrl: string | null
+    storedObject?: { state: string } | null
   }>
 }) => (content.isPremium ? undefined : selectPlaybackAsset(content.videoAssets))
 

@@ -1,4 +1,9 @@
 "use client"
+import { VideoUploadButton } from "@/components/uploads/video-upload-button"
+import { AssetPreview } from "@/components/uploads/asset-preview"
+import { ContentArtwork } from "@/components/catalogue/content-artwork"
+import { videoRequest } from "@/lib/video/client-api"
+import { useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -102,6 +107,7 @@ function EpisodeForm({
       <FileUpload
         label="Episode thumbnail"
         purpose="episodeThumbnail"
+        contentId={season.seriesId}
         value={thumbnailUrl}
         onFilesUploaded={(asset) =>
           form.setValue("thumbnailUrl", asset?.secureUrl ?? null, {
@@ -199,10 +205,13 @@ function SeasonForm({
 export function SeriesMediaContent({
   record,
   disabled,
+  section,
 }: {
   record: EditorRecord
   disabled: boolean
+  section: "episodes" | "video"
 }) {
+  const client = useQueryClient()
   const [seasonEditing, setSeasonEditing] = useState<
     Season | null | undefined
   >()
@@ -264,7 +273,7 @@ export function SeriesMediaContent({
   }
   return (
     <fieldset disabled={disabled} className="mt-6 grid gap-6">
-      <section className="gv-panel">
+      <section className="gv-panel" hidden={section !== "video"}>
         <h2 className="text-xl font-bold text-primary">Trailer</h2>
         <form
           className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
@@ -306,9 +315,15 @@ export function SeriesMediaContent({
         ) : null}
       </section>
       {record.contentType === "SERIES" ? (
-        <section className="gv-panel">
-          <div className="flex justify-between gap-3">
-            <div>
+        <section
+          className="gv-panel"
+          hidden={section !== "episodes"}
+          id="panel-episodes"
+          role="tabpanel"
+          aria-labelledby="tab-episodes"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 basis-72">
               <h2 className="text-xl font-bold text-primary">
                 Series & Episodic Management
               </h2>
@@ -329,7 +344,7 @@ export function SeriesMediaContent({
             </div>
             <button
               type="button"
-              className="gv-action secondary"
+              className="gv-action secondary shrink-0 self-start"
               onClick={() => setSeasonEditing(null)}
             >
               ＋ Add Season
@@ -384,11 +399,23 @@ export function SeriesMediaContent({
                       className="flex flex-wrap items-center justify-between gap-3 py-4"
                       key={episode.id}
                     >
+                      <div className="relative aspect-video w-28 overflow-hidden rounded-lg">
+                        <ContentArtwork
+                          src={episode.thumbnailUrl}
+                          alt={episode.title}
+                          variant="backdrop"
+                        />
+                      </div>
                       <span className="text-sm">
                         <strong className="mr-3 text-primary">
                           {String(episode.episodeNumber).padStart(2, "0")}
                         </strong>
                         {episode.title}
+                        <span className="mt-1 block text-xs">
+                          {episode.runtimeMinutes
+                            ? `${episode.runtimeMinutes} min`
+                            : "Runtime not recorded"}
+                        </span>
                         <span className="mt-1 block text-xs text-muted-foreground">
                           {record.isPremium
                             ? "Premium playback unavailable"
@@ -402,7 +429,25 @@ export function SeriesMediaContent({
                             : ""}
                         </span>
                       </span>
-                      <div className="flex gap-3 text-xs">
+                      <div className="flex flex-wrap items-center gap-3 text-xs">
+                        <VideoUploadButton
+                          contentId={record.id}
+                          episodeId={episode.id}
+                          label={`Season ${season.seasonNumber} · Episode ${episode.episodeNumber}: ${episode.title}`}
+                          rights={record.mediaRights}
+                          compact
+                          disabled={disabled}
+                        />
+                        {episode.videoAssets[0] ? (
+                          <AssetPreview
+                            id={
+                              (
+                                selectPlaybackAsset(episode.videoAssets) ??
+                                episode.videoAssets[0]
+                              ).id
+                            }
+                          />
+                        ) : null}
                         <button
                           type="button"
                           className="font-semibold text-primary"
@@ -450,8 +495,29 @@ export function SeriesMediaContent({
           </div>
         </section>
       ) : null}
-      <section className="gv-panel">
+      <section
+        className="gv-panel"
+        hidden={section !== "video"}
+        id="panel-video"
+        role="tabpanel"
+        aria-labelledby="tab-video"
+      >
         <h2 className="text-xl font-bold text-primary">Media & Playback</h2>
+        {record.contentType !== "SERIES" ? (
+          <div className="my-5 rounded-lg border bg-white p-4">
+            <p className="mb-3 font-semibold">Main video · {record.title}</p>
+            <VideoUploadButton
+              contentId={record.id}
+              label={record.title}
+              rights={record.mediaRights}
+              disabled={disabled}
+            />
+          </div>
+        ) : (
+          <p className="my-4 text-sm">
+            Upload each episode from its row in the Episodes section.
+          </p>
+        )}
         <p className="mt-2 text-xs leading-6 text-slate-600">
           Paste a YouTube link for automatic embedding, or a direct HTTPS
           video-file link. YouTube playback must remain free.
@@ -464,17 +530,50 @@ export function SeriesMediaContent({
             )
             .map((asset) => (
               <div
-                className="flex items-center justify-between gap-3 rounded-lg bg-white p-4 text-xs"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-4 text-xs"
                 key={asset.id}
               >
                 <div className="min-w-0">
-                  <p className="truncate font-semibold">{asset.playbackUrl}</p>
+                  <p className="truncate font-semibold">
+                    {asset.sourceType === "MANAGED"
+                      ? `Uploaded MP4 · ${asset.durationSeconds ? Math.ceil(asset.durationSeconds / 60) + " min" : "Duration unavailable"}`
+                      : asset.playbackUrl}
+                  </p>
                   <p className="mt-1 text-muted-foreground">
                     {asset.isPlayable ? "Playable" : "Stored only"} ·{" "}
                     {asset.licenseType}
                     {asset.episodeId ? " · Episode asset" : ""}
                   </p>
                 </div>
+                <AssetPreview id={asset.id} />
+                <button
+                  type="button"
+                  disabled={mutation.isPending}
+                  className="font-semibold text-primary"
+                  onClick={async () => {
+                    try {
+                      await videoRequest(
+                        `video-assets/${asset.id}/selection`,
+                        "PATCH",
+                        { enabled: !asset.isPlayable }
+                      )
+                      await client.invalidateQueries()
+                      toast.success(
+                        asset.isPlayable
+                          ? "Playback disabled"
+                          : "Playback source selected"
+                      )
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Source selection failed"
+                      )
+                    }
+                  }}
+                >
+                  {asset.isPlayable ? "Disable" : "Use this source"}
+                </button>
                 <button
                   type="button"
                   className="text-red-700"

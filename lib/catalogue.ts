@@ -18,11 +18,11 @@ export const catalogueInclude = {
     include: {
       episodes: {
         orderBy: { episodeNumber: "asc" as const },
-        include: { videoAssets: true },
+        include: { videoAssets: { include: { storedObject: { select: { state: true } } } } },
       },
     },
   },
-  videoAssets: true,
+  videoAssets: { include: { storedObject: { select: { state: true } } } },
 } as const
 
 export const catalogueQuerySchema = z.object({

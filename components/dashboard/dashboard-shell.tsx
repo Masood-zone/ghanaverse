@@ -8,6 +8,7 @@ import { MaterialSymbol } from "@/components/common/MaterialSymbol"
 const navigation = [
   ["Dashboard", "/admin", "dashboard"],
   ["Content", "/admin/content", "video_library"],
+  ["Video storage", "/admin/storage", "cloud_upload"],
   ["Creators", "/admin/creators", "groups"],
   ["Metadata & Rights", "/admin/metadata", "category"],
   ["Collections", "/admin/collections", "collections_bookmark"],

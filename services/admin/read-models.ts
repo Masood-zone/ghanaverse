@@ -12,11 +12,11 @@ export const editorInclude = {
     include: {
       episodes: {
         orderBy: { episodeNumber: "asc" as const },
-        include: { videoAssets: true },
+        include: { videoAssets: { include: { storedObject: { select: { state: true, metadata: true } } } } },
       },
     },
   },
-  videoAssets: true,
+  videoAssets: { include: { storedObject: { select: { state: true, metadata: true } } } },
 } as const
 const listInclude = {
   rightsHolder: { select: { name: true } },

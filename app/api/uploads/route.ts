@@ -1,4 +1,5 @@
-import { requireAdmin } from "@/lib/auth/access"
+import { requireUser } from "@/lib/auth/access"
+import { contentAccess, contentActor } from "@/services/content/access"
 import { getPrisma } from "@/lib/prisma"
 import { apiSuccess } from "@/lib/api-response"
 import { PlatformError, routeError } from "@/lib/route-error"
@@ -6,7 +7,8 @@ import { uploadArtwork } from "@/lib/cloudinary/cloudinary-service"
 import { MAX_ARTWORK_BYTES } from "@/lib/validation/uploads"
 export async function POST(request: Request) {
   try {
-    const { user } = await requireAdmin()
+    const { user } = await requireUser()
+    await contentActor(getPrisma(), user.id)
     const origin = request.headers.get("origin")
     if (origin && origin !== new URL(request.url).origin)
       throw new PlatformError(
@@ -46,6 +48,11 @@ export async function POST(request: Request) {
       headers: { "content-type": request.headers.get("content-type") ?? "" },
     }).formData()
     const file = form.get("file")
+    if (user.role !== "ADMIN") {
+      const contentId = form.get("contentId")
+      if (typeof contentId !== "string") throw new PlatformError(400, "DESTINATION_REQUIRED", "Save your title before uploading artwork.")
+      await contentAccess(getPrisma(), user.id, contentId, true)
+    }
     if (!(file instanceof File))
       throw new PlatformError(400, "FILE_REQUIRED", "Choose an image")
     const upload = await uploadArtwork(file, form.get("purpose"))

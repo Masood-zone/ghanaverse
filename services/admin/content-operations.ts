@@ -18,6 +18,7 @@ import { publicationIssues } from "@/lib/validation/admin"
 import { artwork, editable } from "./guards"
 import { editorInclude } from "./read-models"
 import { resolvePlaybackSource } from "@/lib/playback-source"
+import { prepareMediaDeletion } from "@/services/video/storage"
 async function rejectPaidYouTube(tx: Prisma.TransactionClient, id: string) {
   const assets = await tx.videoAsset.findMany({
     where: {
@@ -41,7 +42,10 @@ export async function mutateContent({ tx, id, child, method, raw }: Context) {
   let result: { id: string } | undefined
   if (!child) {
     if (id) await editable(tx, id)
-    if (method === "DELETE") result = await tx.content.delete({ where: { id } })
+    if (method === "DELETE") {
+      await prepareMediaDeletion(tx, id)
+      result = await tx.content.delete({ where: { id } })
+    }
     else {
       const input = contentMutationSchema.parse(raw)
       if (id && input.isPremium) await rejectPaidYouTube(tx, id)
@@ -141,6 +145,8 @@ export async function mutateContent({ tx, id, child, method, raw }: Context) {
     if (!content)
       throw new PlatformError(404, "NOT_FOUND", "Title was not found")
     if (status === "PUBLISHED") {
+      if (await tx.videoUploadSession.count({ where: { contentId: id, status: { notIn: ["COMPLETED", "CANCELLED"] } } }))
+        throw new PlatformError(409, "UPLOAD_IN_PROGRESS", "Complete or cancel unfinished video uploads before publishing.")
       if (content.isPremium) await rejectPaidYouTube(tx, id)
       const issues = publicationIssues(content)
       if (issues.length)
