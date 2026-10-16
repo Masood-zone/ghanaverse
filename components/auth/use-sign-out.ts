@@ -3,8 +3,8 @@ import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth-client"
-import { announceProfileChange } from "@/lib/viewer-events"
 export const SIGNING_OUT_KEY = "ghanaverse.signing-out"
+
 export function useSignOut() {
   const [pending, setPending] = useState(false)
   const client = useQueryClient()
@@ -19,7 +19,6 @@ export function useSignOut() {
         throw new Error("Sign-out could not be completed. Please try again.")
       await client.cancelQueries()
       client.clear()
-      announceProfileChange()
       window.location.replace(new URL("/", window.location.origin).href)
     } catch (error) {
       sessionStorage.removeItem(SIGNING_OUT_KEY)

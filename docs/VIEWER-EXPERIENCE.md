@@ -25,7 +25,7 @@ Photos accept decoded JPEG, PNG, or WebP images up to 8 MB. The server processes
 
 ## Authentication and playback
 
-Successful registration establishes a session, preserves the original local callback, and displays a welcome toast once. Sign-in with multiple profiles opens the profile picker before continuing to that callback. Sign-out cancels viewer queries, clears client data, notifies other tabs, and opens Home with a fresh request.
+Successful registration establishes a session, preserves the original local callback, and displays a welcome toast once. The server's `/auth/continue` page validates the session and opens the profile picker when multiple profiles exist, before continuing to that callback. Sign-in no longer performs its own extra session and profile API requests. Sign-out cancels viewer queries, clears client data, and opens Home with a fresh request. Better Auth synchronizes logout with other tabs; their domain caches are cleared and protected pages return to sign-in. Failed logout leaves the account usable and allows a retry. Protected pages and APIs check access directly without an auth proxy.
 
 The first video starts manually. **Autoplay next episode** defaults off. When enabled, completion must be saved before a cancellable ten-second countdown starts. The immediate next episode must be available. Automatic playback blocked by the browser leaves manual Play available.
 

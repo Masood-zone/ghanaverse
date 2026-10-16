@@ -1,15 +1,17 @@
 import { requireUserPage } from "@/lib/auth/access"
 import { ProfilesContent } from "@/components/profiles/profiles-content"
-import { safeCallbackUrl } from "@/lib/auth/callback"
+import {
+  safeCallbackUrl,
+  callbackWithSearch,
+  type PageSearchParams,
+} from "@/lib/auth/callback"
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>
+  searchParams: Promise<PageSearchParams>
 }) {
-  const { callbackUrl } = await searchParams
-  const destination = safeCallbackUrl(callbackUrl)
-  await requireUserPage(
-    `/profiles?callbackUrl=${encodeURIComponent(destination)}`
-  )
+  const query = await searchParams
+  const destination = safeCallbackUrl(query.callbackUrl)
+  await requireUserPage(callbackWithSearch("/profiles", query))
   return <ProfilesContent callbackUrl={destination} />
 }

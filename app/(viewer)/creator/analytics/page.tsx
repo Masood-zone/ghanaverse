@@ -1,10 +1,17 @@
 import { requireUserPage } from "@/lib/auth/access"
+import { callbackWithSearch, type PageSearchParams } from "@/lib/auth/callback"
 import { analyticsScope } from "@/services/analytics/operations"
 import { PlatformError } from "@/lib/route-error"
 import { AnalyticsContent } from "@/components/analytics/analytics-content"
 export const metadata = { robots: { index: false, follow: false } }
-export default async function RightsHolderReportsPage() {
-  const { user } = await requireUserPage("/creator/analytics")
+export default async function RightsHolderReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<PageSearchParams>
+}) {
+  const { user } = await requireUserPage(
+    callbackWithSearch("/creator/analytics", await searchParams)
+  )
   try {
     await analyticsScope(user.id)
   } catch (error) {

@@ -1,5 +1,8 @@
 import Link from "next/link"
 import { requireUserPage } from "@/lib/auth/access"
+import { canManageContent } from "@/lib/auth/policy"
+import { CreatorAccessRequired } from "@/components/auth/creator-access-required"
+import { callbackWithSearch, type PageSearchParams } from "@/lib/auth/callback"
 import { contentAccess } from "@/services/content/access"
 import { getPrisma } from "@/lib/prisma"
 import { editorInclude } from "@/services/admin/read-models"
@@ -7,12 +10,17 @@ import { ContentArtwork } from "@/components/catalogue/content-artwork"
 import { AssetPreview } from "@/components/uploads/asset-preview"
 export default async function Page({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<PageSearchParams>
 }) {
-  const { id } = await params,
-    db = getPrisma()
-  const { user } = await requireUserPage(`/creator/content/${id}/preview`)
+  const [{ id }, query] = await Promise.all([params, searchParams])
+  const { user } = await requireUserPage(
+    callbackWithSearch(`/creator/content/${id}/preview`, query)
+  )
+  if (!canManageContent(user.role)) return <CreatorAccessRequired />
+  const db = getPrisma()
   await contentAccess(db, user.id, id)
   const content = await db.content.findUniqueOrThrow({
     where: { id },

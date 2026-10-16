@@ -5,9 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { authClient } from "@/lib/auth-client"
-import { safeCallbackUrl, profilePickerUrl } from "@/lib/auth/callback"
-import { api } from "@/lib/api-client"
-import type { ProfilesData } from "@/types/viewer"
+import { authContinuationUrl } from "@/lib/auth/callback"
 import { FormError } from "@/components/admin/shared"
 import {
   getAuthFormSchema,
@@ -62,29 +60,11 @@ export function AuthForm({
         )
         return
       }
-      const session = await authClient.getSession({
-        query: { disableCookieCache: true },
-      })
-      if (!session.data?.user) {
-        setError(
-          mode === "register"
-            ? "Your account was created, but sign-in could not finish. Sign in below to continue."
-            : "Sign-in could not finish. Please try again."
-        )
-        setMode("sign-in")
-        return
-      }
       await client.cancelQueries()
       client.clear()
-      const profiles = await api<ProfilesData>("/profiles")
       if (mode === "register")
-        sessionStorage.setItem("ghanaverse.welcome", session.data.user.name)
-      const destination = safeCallbackUrl(callbackUrl)
-      window.location.replace(
-        profiles.profiles.length > 1
-          ? profilePickerUrl(destination)
-          : destination
-      )
+        sessionStorage.setItem("ghanaverse.welcome", result.data.user.name)
+      window.location.replace(authContinuationUrl(callbackUrl))
     } catch {
       setError(
         "We could not finish opening your account. Try signing in to continue; your original destination is preserved."

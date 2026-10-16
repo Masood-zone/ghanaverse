@@ -6,10 +6,17 @@ import { Toaster, toast } from "sonner"
 import { PROFILE_CHANGED_EVENT } from "@/lib/viewer-events"
 import { SIGNING_OUT_KEY } from "@/components/auth/use-sign-out"
 import { UploadWorkspace } from "@/components/uploads/upload-workspace"
+import { authClient } from "@/lib/auth-client"
 export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter(),
     pathname = usePathname(),
     redirecting = useRef(false)
+  const {
+    data: session,
+    isPending,
+    error: sessionError,
+  } = authClient.useSession()
+  const previousUserId = useRef<string | null | undefined>(undefined)
   const [client] = useState(
     () =>
       new QueryClient({
@@ -19,6 +26,22 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       })
   )
+  useEffect(() => {
+    if (isPending || sessionError) return
+    const userId = session?.user.id ?? null
+    const previous = previousUserId.current
+    previousUserId.current = userId
+    if (previous === undefined || previous === userId) return
+    // Better Auth synchronizes sign-out between tabs; only domain caches need clearing.
+    void client.cancelQueries().then(() => {
+      client.clear()
+      if (
+        !sessionStorage.getItem(SIGNING_OUT_KEY) &&
+        !window.location.pathname.startsWith("/auth")
+      )
+        window.location.reload()
+    })
+  }, [client, isPending, sessionError, session?.user.id])
   useEffect(() => {
     sessionStorage.removeItem(SIGNING_OUT_KEY)
     const welcome = sessionStorage.getItem("ghanaverse.welcome")

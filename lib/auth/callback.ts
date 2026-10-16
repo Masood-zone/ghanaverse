@@ -1,4 +1,9 @@
 const callbackOrigin = "https://ghanaverse.invalid"
+export type PageSearchParams = Record<string, string | string[] | undefined>
+
+export function authContinuationUrl(callbackUrl: string) {
+  return `/auth/continue?callbackUrl=${encodeURIComponent(safeCallbackUrl(callbackUrl))}`
+}
 
 export function safeCallbackUrl(value: unknown): string {
   if (
@@ -33,7 +38,7 @@ export function profilePickerUrl(callbackUrl: string) {
 
 export function callbackWithSearch(
   pathname: string,
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams: PageSearchParams
 ) {
   const url = new URL(safeCallbackUrl(pathname), callbackOrigin)
   for (const [key, value] of Object.entries(searchParams)) {

@@ -1,12 +1,13 @@
 import { requireUserPage } from "@/lib/auth/access"
+import { callbackWithSearch, type PageSearchParams } from "@/lib/auth/callback"
 import { LibraryContent } from "@/components/library/library-content"
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; page?: string }>
+  searchParams: Promise<PageSearchParams>
 }) {
-  await requireUserPage("/library")
   const params = await searchParams
+  await requireUserPage(callbackWithSearch("/library", params))
   return (
     <LibraryContent
       tab={params.tab === "history" ? "history" : "list"}

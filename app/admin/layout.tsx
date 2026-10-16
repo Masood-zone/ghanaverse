@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { requireAdminPage } from "@/lib/auth/access"
+import { getOptionalUser } from "@/lib/auth/access"
+import { isAdminRole } from "@/lib/auth/policy"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 export const metadata = { robots: { index: false, follow: false } }
 export default async function AdminLayout({
@@ -7,6 +8,7 @@ export default async function AdminLayout({
 }: {
   children: ReactNode
 }) {
-  const { user } = await requireAdminPage()
-  return <DashboardShell name={user.name}>{children}</DashboardShell>
+  const access = await getOptionalUser()
+  if (!access || !isAdminRole(access.user.role)) return children
+  return <DashboardShell name={access.user.name}>{children}</DashboardShell>
 }

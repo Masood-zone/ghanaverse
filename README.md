@@ -20,6 +20,8 @@ Open <http://localhost:3000>. Sign in at `/auth?callbackUrl=%2Fadmin` with the a
 
 Required: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD` (any non-empty value). `SEED_ADMIN_NAME` is optional. The seed creates the administrator and reference genres, languages, and classifications; it creates no demo users or catalogue titles. Sign-in accepts short seeded administrator passwords; viewer registration requires at least eight characters.
 
+Authentication uses Better Auth with the Prisma adapter and server-side role checks. The browser uses the current origin; `NEXT_PUBLIC_APP_URL` is no longer needed. Protected pages and APIs validate sessions directly, without a proxy. See [authentication architecture and verification](docs/AUTHENTICATION.md).
+
 Artwork requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. These are server-only. Without them, drafts remain usable and uploads return an explicit unavailable response. `YOUTUBE_API_KEY` is only needed for trailer search; a YouTube video ID or URL can be entered directly.
 
 Private R2 video uploads require the five `R2_*` values in `.env.example`. Follow the [R2 setup and recovery guide](docs/R2_VIDEO_SETUP.md) to configure bucket permissions, CORS, and the seven-day multipart lifecycle. Administrators use `/admin/storage`; linked rights holders manage their own titles at `/creator/content`. Prepared MP4 files upload directly to R2, with an 8 GB shared allowance including unfinished reservations. Playback URLs are issued only after authorization.
@@ -42,6 +44,8 @@ pnpm build
 Install the browser once with `pnpm exec playwright install chromium`. `pnpm qa:browser` runs the administrator acceptance flow against a running local server, including a live Cloudinary artwork upload. It creates temporary QA records, captures desktop/mobile screenshots under `artifacts/implementation-qa`, and removes its fixture records and uploaded provider image afterward.
 
 `pnpm qa:viewer` verifies registration, profile editing/selection and refresh, owned account/library queries, watchlist changes, access restrictions, and logout with temporary fixtures.
+
+After `pnpm test:prepare` and `pnpm exec next build`, `pnpm qa:auth` starts its own production server on `localhost:3100`, using only the isolated `ghanaverse_test` schema. It verifies protected pages, deep links, sign-in/registration, profiles, password changes, logout failures, cross-tab logout, and access revocation, then removes its fixture accounts and stops its server. Results, screenshots, and a Playwright trace are saved under ignored `artifacts/implementation-qa/auth`. The direct build command avoids the application's migration-running prebuild hook.
 
 `pnpm qa:rights` verifies administrator-created rights-holder accounts, content ownership, YouTube-link detection, minutes conversion, immediate stream counting, reports and CSV export against the running local server. It uses a simulated YouTube API for deterministic checks, decodes a generated native video, and separately attempts live YouTube playback. Temporary QA records are removed afterward. See [rights-holder and analytics guide](docs/RIGHTS_PLAYBACK_ANALYTICS.md) for access rules, metrics, and future revenue options.
 

@@ -1,5 +1,6 @@
 import { prismaAdapter } from "@better-auth/prisma-adapter"
 import { betterAuth } from "better-auth"
+import { UserRole } from "@/app/generated/prisma/enums"
 import { getPrisma } from "@/lib/prisma"
 import { DEFAULT_REGISTRATION_ROLE } from "@/lib/auth/policy"
 
@@ -9,6 +10,7 @@ function createAuth(secret: string, baseURL: string) {
     secret,
     database: prismaAdapter(getPrisma(), { provider: "postgresql" }),
     emailAndPassword: { enabled: true },
+    session: { cookieCache: { enabled: false } },
     databaseHooks: {
       session: {
         create: {
@@ -52,9 +54,15 @@ function createAuth(secret: string, baseURL: string) {
     user: {
       additionalFields: {
         role: {
-          type: "string",
-          required: false,
+          type: Object.values(UserRole),
+          required: true,
           defaultValue: DEFAULT_REGISTRATION_ROLE,
+          input: false,
+        },
+        isSuspended: {
+          type: "boolean",
+          required: true,
+          defaultValue: false,
           input: false,
         },
       },
@@ -63,6 +71,7 @@ function createAuth(secret: string, baseURL: string) {
 }
 
 let authInstance: ReturnType<typeof createAuth> | undefined
+export type Auth = ReturnType<typeof createAuth>
 
 export function getAuth() {
   if (authInstance) return authInstance

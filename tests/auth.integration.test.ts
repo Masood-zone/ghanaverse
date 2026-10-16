@@ -58,6 +58,7 @@ describe("Better Auth foundation", () => {
         email,
         password: "foundation-password",
         role,
+        isSuspended: true,
       })
       expect(response.status).toBe(200)
       const cookie = response.headers
@@ -67,6 +68,7 @@ describe("Better Auth foundation", () => {
       const session = await authRequest("/get-session", undefined, cookie)
       const body = await session.json()
       expect(body.user.role).toBe("VIEWER")
+      expect(body.user.isSuspended).toBe(false)
       expect(
         (await getPrisma().user.findUniqueOrThrow({ where: { email } })).role
       ).toBe("VIEWER")
@@ -75,6 +77,40 @@ describe("Better Auth foundation", () => {
       ).toBe(1)
     }
   )
+
+  it("does not allow account updates to change role or suspension", async () => {
+    const email = `protected-fields-${crypto.randomUUID()}@example.test`
+    createdEmails.add(email)
+    const registration = await authRequest("/sign-up/email", {
+      name: "Original Name",
+      email,
+      password: "foundation-password",
+    })
+    const cookie = registration.headers
+      .getSetCookie()
+      .map((value) => value.split(";")[0])
+      .join("; ")
+    const response = await authRequest(
+      "/update-user",
+      {
+        name: "Updated Name",
+        role: "ADMIN",
+        isSuspended: true,
+      },
+      cookie
+    )
+    expect(response.status).toBe(400)
+    const user = await getPrisma().user.findUniqueOrThrow({ where: { email } })
+    expect(user).toMatchObject({
+      name: "Original Name",
+      role: "VIEWER",
+      isSuspended: false,
+    })
+    expect(
+      (await authRequest("/update-user", { name: "Updated Name" }, cookie))
+        .status
+    ).toBe(200)
+  })
 
   it("signs in and signs out a credential account", async () => {
     const email = `phase3-${Date.now()}@example.test`

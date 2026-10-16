@@ -24,6 +24,7 @@
     "test:prepare": "tsx scripts/test-database.ts",
     "qa:browser": "tsx scripts/browser-qa.ts",
     "qa:viewer": "tsx scripts/viewer-qa.ts",
+    "qa:auth": "tsx scripts/auth-browser-qa.ts",
     "qa:rights": "tsx scripts/rights-playback-qa.ts",
     "video:storage:check": "node --conditions=react-server --import tsx scripts/video-storage.ts check",
     "video:storage:status": "node --conditions=react-server --import tsx scripts/video-storage.ts status",

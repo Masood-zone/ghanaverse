@@ -1,16 +1,21 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { requireAdmin } from "@/lib/auth/access"
+import { requireAdminPage } from "@/lib/auth/access"
+import { callbackWithSearch, type PageSearchParams } from "@/lib/auth/callback"
 import { getPrisma } from "@/lib/prisma"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
 import { AssetPreview } from "@/components/uploads/asset-preview"
 export default async function Preview({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<PageSearchParams>
 }) {
-  await requireAdmin()
-  const { id } = await params
+  const [{ id }, query] = await Promise.all([params, searchParams])
+  await requireAdminPage(
+    callbackWithSearch(`/admin/content/${id}/preview`, query)
+  )
   const content = await getPrisma().content.findUnique({
     where: { id },
     include: {

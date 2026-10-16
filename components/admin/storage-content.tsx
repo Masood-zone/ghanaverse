@@ -78,11 +78,11 @@ export function StorageContent() {
                 Missing: {query.data.configuration.missing.join(", ")}
               </p>
             ) : null}
-            <p className="mt-2 text-xs">
+            {/* <p className="mt-2 text-xs">
               Credentials and signed URLs are never shown. See
               docs/R2_VIDEO_SETUP.md for bucket setup, CORS, and deployment
               steps.
-            </p>
+            </p> */}
           </div>
           <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {(

@@ -1,30 +1,15 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { requireUserPage } from "@/lib/auth/access"
-import { contentActor } from "@/services/content/access"
-import { getPrisma } from "@/lib/prisma"
-import { PlatformError } from "@/lib/route-error"
+import { getOptionalUser } from "@/lib/auth/access"
+import { canManageContent } from "@/lib/auth/policy"
 export const metadata = { robots: { index: false, follow: false } }
 export default async function CreatorContentLayout({
   children,
 }: {
   children: ReactNode
 }) {
-  const { user } = await requireUserPage("/creator/content")
-  try {
-    await contentActor(getPrisma(), user.id)
-  } catch (error) {
-    if (!(error instanceof PlatformError)) throw error
-    return (
-      <section className="gv-container py-16">
-        <h1 className="text-3xl font-bold">Rights-holder workspace</h1>
-        <p className="mt-4">
-          An administrator must grant rights-holder access and link your
-          organization before you can manage content.
-        </p>
-      </section>
-    )
-  }
+  const access = await getOptionalUser()
+  if (!access || !canManageContent(access.user.role)) return children
   return (
     <section className="gv-admin gv-container py-8">
       <nav
