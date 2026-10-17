@@ -3,6 +3,7 @@ import {
   FormSelect,
   FormSwitch,
   FormCheckbox,
+  FormDateTimePicker,
 } from "@/components/ui/form-controls"
 import { SettingRow } from "@/components/ui/setting-row"
 import { SelectField } from "@/components/ui/select-field"
@@ -129,7 +130,9 @@ type LicenseValues = {
   commercialUse: boolean
 }
 function LicenseForm({ data }: { data: EarningsData }) {
-  const form = useForm<LicenseValues>(),
+  const form = useForm<LicenseValues>({
+      defaultValues: { dueAt: "", startsAt: "", endsAt: "" },
+    }),
     mutation = useOperation("/admin/billing")
   return (
     <form
@@ -206,22 +209,33 @@ function LicenseForm({ data }: { data: EarningsData }) {
             {...form.register("amount", { valueAsNumber: true })}
           />
         </Label>
-        <Label className="gv-label">
-          Payment due (UTC)
-          <Input type="datetime-local" required {...form.register("dueAt")} />
-        </Label>
-        <Label className="gv-label">
-          Licence starts (UTC)
-          <Input
-            type="datetime-local"
+        <div className="gv-label">
+          <Label htmlFor="license-due-at">Payment due (UTC)</Label>
+          <FormDateTimePicker
+            id="license-due-at"
             required
-            {...form.register("startsAt")}
+            control={form.control}
+            name="dueAt"
           />
-        </Label>
-        <Label className="gv-label">
-          Licence ends (UTC)
-          <Input type="datetime-local" required {...form.register("endsAt")} />
-        </Label>
+        </div>
+        <div className="gv-label">
+          <Label htmlFor="license-starts-at">Licence starts (UTC)</Label>
+          <FormDateTimePicker
+            id="license-starts-at"
+            required
+            control={form.control}
+            name="startsAt"
+          />
+        </div>
+        <div className="gv-label">
+          <Label htmlFor="license-ends-at">Licence ends (UTC)</Label>
+          <FormDateTimePicker
+            id="license-ends-at"
+            required
+            control={form.control}
+            name="endsAt"
+          />
+        </div>
       </div>
       <Label className="gv-label">
         Contract reference

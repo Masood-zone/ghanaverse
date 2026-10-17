@@ -1,6 +1,6 @@
 "use client"
 
-import type { ComponentProps } from "react"
+import { useId, type ComponentProps } from "react"
 import {
   useController,
   type FieldValues,
@@ -8,6 +8,10 @@ import {
 } from "react-hook-form"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
+import {
+  DateTimePicker,
+  type DateTimePickerProps,
+} from "@/components/ui/date-time-picker"
 import {
   SelectField,
   type SelectFieldProps,
@@ -17,6 +21,43 @@ type Binding<T extends FieldValues> = Pick<
   UseControllerProps<T>,
   "control" | "name"
 >
+
+export function FormDateTimePicker<T extends FieldValues>({
+  control,
+  name,
+  required,
+  ...props
+}: Binding<T> & Omit<DateTimePickerProps, "value" | "onValueChange">) {
+  const errorId = useId()
+  const { field, fieldState } = useController({
+    control,
+    name,
+    rules: { required: required ? "Choose a date and time." : false },
+  })
+  return (
+    <div className="space-y-1.5">
+      <DateTimePicker
+        {...props}
+        ref={field.ref}
+        required={required}
+        value={field.value ?? ""}
+        onValueChange={field.onChange}
+        onBlur={field.onBlur}
+        aria-invalid={fieldState.invalid || undefined}
+        aria-describedby={
+          [props["aria-describedby"], fieldState.error ? errorId : undefined]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
+      />
+      {fieldState.error ? (
+        <p id={errorId} role="alert" className="text-sm text-destructive">
+          {fieldState.error.message}
+        </p>
+      ) : null}
+    </div>
+  )
+}
 
 export function FormSelect<T extends FieldValues>({
   control,
