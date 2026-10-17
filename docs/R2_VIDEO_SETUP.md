@@ -20,7 +20,9 @@ Use the endpoint displayed by Cloudflare for jurisdiction-specific buckets. Vari
 
 ## 2. Configure CORS and lifecycle
 
-Open the bucket's **Settings → CORS policy** and paste the contents of `docs/r2-cors.local.json`. Add the exact production origin to `AllowedOrigins` before deployment, such as `https://your-application.example`, without a trailing slash. Include each preview origin only if you intend to permit uploads from it. Do not use `*` for origins.
+Open the bucket's **Settings → CORS policy**. Use `docs/r2-cors.production.json` for the current shared production bucket, or `docs/r2-cors.local.json` for a separate local-only bucket. The production policy records the live bucket's existing origins and includes the actual website origin, `https://ghanaverse.vercel.app`. The `www` hostname is a different origin and does not authorize uploads from the hostname without `www`. For another deployment, add its exact origin without a trailing slash. Include each preview origin only if you intend to permit uploads from it. Do not use `*` for origins.
+
+CORS is a bucket setting: pushing this JSON to Git does not apply it to Cloudflare. The production origin was added to the live bucket on 17 October 2026 and verified with an Edge browser multipart upload from the production origin, checksum acknowledgements, completion, and a range read. The temporary diagnostic object was deleted afterward. If the server connection check passes but browser parts fail with no HTTP response, check the bucket's allowed origin, methods and headers before changing credentials or video formats.
 
 The browser needs `PUT` for parts, `GET`/`HEAD` for playback, `Content-MD5` for integrity, and exposed `ETag` for acknowledgements. Signed `Content-Length` binds each part to its reserved length; the browser supplies that header. Application API requests continue to use same-origin authentication.
 

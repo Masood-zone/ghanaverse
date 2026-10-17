@@ -1,0 +1,14 @@
+[
+  {
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "https://www.ghanaverse.vercel.app",
+      "https://ghanaverse.vercel.app"
+    ],
+    "AllowedMethods": ["GET", "HEAD", "PUT"],
+    "AllowedHeaders": ["Content-Type", "Content-MD5", "Content-Length", "Range", "If-Range"],
+    "ExposeHeaders": ["ETag", "Accept-Ranges", "Content-Range", "Content-Length"],
+    "MaxAgeSeconds": 3600
+  }
+]
