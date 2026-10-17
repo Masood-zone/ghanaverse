@@ -330,15 +330,15 @@ export const r2 = {
     )
     if (await r2.head(target)) throw new Error("R2_DELETE_UNCONFIRMED")
   },
-  async playback(target: Target) {
+  async playback(target: Target, expiresIn = 3600) {
     const { client, Bucket } = provider(target)
     return {
       url: await getSignedUrl(
         client,
         new GetObjectCommand({ Bucket, Key: target.objectKey }),
-        { expiresIn: 3600 }
+        { expiresIn }
       ),
-      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
     }
   },
   async diagnose() {

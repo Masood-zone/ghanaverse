@@ -19,6 +19,7 @@ import { EpisodeBrowser } from "@/components/player/episode-browser"
 import { episodeLabel, selectPlaybackAsset } from "@/lib/series"
 import { RestrictedContent } from "@/components/profiles/restricted-content"
 import { callbackWithSearch } from "@/lib/auth/callback"
+import { premiumAccess, activeLicense } from "@/services/billing/access"
 
 type WatchLink = {
   url?: string
@@ -71,8 +72,16 @@ export default async function TitlePage({
   const links = (
     Array.isArray(content.externalWatchLinks) ? content.externalWatchLinks : []
   ) as WatchLink[]
-  const mainAsset = !content.isPremium
-    ? selectPlaybackAsset(content.videoAssets)
+  const canPlayPremium =
+    !content.isPremium ||
+    ((await premiumAccess(access?.user.id)).active &&
+      Boolean(await activeLicense(content.id, content.rightsHolderId)))
+  const mainAsset = canPlayPremium
+    ? selectPlaybackAsset(
+        content.videoAssets.filter(
+          (a) => !content.isPremium || a.sourceType === "MANAGED"
+        )
+      )
     : undefined
   const series =
     content.contentType === "SERIES"
@@ -185,7 +194,13 @@ export default async function TitlePage({
             </div>
             {content.isPremium ? (
               <p className="mt-4 text-sm font-semibold text-amber-200">
-                Premium playback is not available during Phase 4.
+                {canPlayPremium ? (
+                  "Included in your Premium Pass."
+                ) : (
+                  <Link href="/plans" className="underline">
+                    Premium Pass required · View plans or renew access →
+                  </Link>
+                )}
               </p>
             ) : null}
           </div>

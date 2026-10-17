@@ -17,6 +17,7 @@ import { isPermittedPlaybackAsset } from "@/lib/image-policy"
 import { getPrisma } from "@/lib/prisma"
 import { getActiveProfile } from "@/lib/profiles"
 import { callbackWithSearch } from "@/lib/auth/callback"
+import { premiumAccess, activeLicense } from "@/services/billing/access"
 
 export default async function WatchPage({
   params,
@@ -46,8 +47,13 @@ export default async function WatchPage({
   if (!content || content.publicationStatus !== "PUBLISHED") notFound()
   if (!canViewContent(profile, content))
     return <RestrictedContent callbackUrl={callbackUrl} />
-  const permitted = isPermittedPlaybackAsset(asset)
-  const premium = content.isPremium
+  const permitted =
+    isPermittedPlaybackAsset(asset) &&
+    (!content.isPremium || asset.sourceType === "MANAGED")
+  const premium = content.isPremium && !(await premiumAccess(user.id)).active
+  const licenseMissing =
+    content.isPremium &&
+    !(await activeLicense(content.id, content.rightsHolderId))
   const progress = profile
     ? await getPrisma().watchProgress.findFirst({
         where: {
@@ -85,8 +91,14 @@ export default async function WatchPage({
         {premium ? (
           <PlayerState
             icon={<LockKeyhole />}
-            title="Premium playback is not available yet"
-            body="This title requires a subscription. Premium playback is currently unavailable."
+            title="Unlock this title with Premium Pass"
+            body="An active Premium Pass unlocks available exclusive titles. Visit Plans to purchase or renew access."
+          />
+        ) : licenseMissing ? (
+          <PlayerState
+            icon={<LockKeyhole />}
+            title="Title currently unavailable"
+            body="This title does not currently have an active streaming licence."
           />
         ) : !permitted ? (
           <PlayerState
@@ -127,6 +139,11 @@ export default async function WatchPage({
           />
         )}
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+          {premium ? (
+            <Link href="/plans" className="gv-action">
+              View Premium Pass · Renew access
+            </Link>
+          ) : null}
           <section className="rounded-xl border bg-white p-5 md:p-7">
             <div className="flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
               <span>{content.classification}</span>

@@ -892,7 +892,7 @@ describe("protected source authorization", () => {
     })
     await expect(
       playbackSource(viewer, result.assetId!, { profileId })
-    ).rejects.toMatchObject({ code: "PLAYBACK_NOT_PERMITTED" })
+    ).rejects.toMatchObject({ code: "PREMIUM_REQUIRED" })
   })
   it("rejects unsupported codecs and enforces fixed multipart sizing", () => {
     expect(

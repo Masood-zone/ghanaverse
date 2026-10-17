@@ -85,6 +85,8 @@ function NativePlayer({
   const [hasCaptions, setHasCaptions] = useState(false)
   const [captions, setCaptions] = useState(preferSubtitles)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
+  const [sourceExpiry, setSourceExpiry] = useState(0)
+  const [accessExpiry, setAccessExpiry] = useState(0)
   const renew = useCallback(() => {
     if (renewal.current) return renewal.current
     const video = ref.current
@@ -92,18 +94,24 @@ function NativePlayer({
       position: video && expiry.current ? video.currentTime : initialPosition,
       playing: playIntent.current || Boolean(video && !video.paused),
     }
-    renewal.current = videoRequest<{ url: string; expiresAt: string }>(
-      `playback/assets/${assetId}/source`,
-      "POST",
-      { profileId }
-    )
+    renewal.current = videoRequest<{
+      url: string
+      expiresAt: string
+      accessExpiresAt?: string | null
+    }>(`playback/assets/${assetId}/source`, "POST", { profileId })
       .then((source) => {
         expiry.current = Date.parse(source.expiresAt)
+        setSourceExpiry(expiry.current)
+        setAccessExpiry(
+          source.accessExpiresAt ? Date.parse(source.accessExpiresAt) : 0
+        )
         lastRenewed.current = Date.now()
         setSource(source.url)
         setError("")
       })
       .catch((error: unknown) => {
+        ref.current?.pause()
+        setSource("")
         setLoading(false)
         setError(
           error instanceof Error
@@ -116,6 +124,46 @@ function NativePlayer({
       })
     return renewal.current
   }, [assetId, profileId, initialPosition])
+  useEffect(() => {
+    if (!sourceExpiry || sourceType !== "MANAGED") return
+    const timer = window.setTimeout(
+      () => {
+        void renew()
+      },
+      Math.max(1000, sourceExpiry - Date.now() - 15000)
+    )
+    return () => window.clearTimeout(timer)
+  }, [sourceExpiry, sourceType, renew])
+  useEffect(() => {
+    if (!accessExpiry) return
+    let timer: number
+    const expire = () => {
+      window.clearTimeout(timer)
+      if (Date.now() < accessExpiry) {
+        timer = window.setTimeout(
+          expire,
+          Math.min(2147483647, accessExpiry - Date.now())
+        )
+        return
+      }
+      if (Date.now() >= accessExpiry) {
+        ref.current?.pause()
+        setSource("")
+        setError(
+          "Your premium access or this title's licence has expired. Visit Plans to renew access."
+        )
+      }
+    }
+    timer = window.setTimeout(
+      expire,
+      Math.min(2147483647, Math.max(0, accessExpiry - Date.now()))
+    )
+    window.addEventListener("focus", expire)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener("focus", expire)
+    }
+  }, [accessExpiry])
   useEffect(() => {
     if (sourceType === "MANAGED") void renew()
   }, [sourceType, renew])

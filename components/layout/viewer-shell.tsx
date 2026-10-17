@@ -1,9 +1,14 @@
+"use client"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { SubscriptionShell } from "./subscription-shell"
 import type { ReactNode } from "react"
 import { Brand } from "@/components/layout/brand"
 import { ViewerNavigation } from "@/components/layout/viewer-navigation"
 
 export function ViewerShell({ children }: { children: ReactNode }) {
+  const path = usePathname()
+  if (path.startsWith("/plans") || path === "/account") return <SubscriptionShell>{children}</SubscriptionShell>
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">

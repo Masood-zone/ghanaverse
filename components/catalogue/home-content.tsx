@@ -4,20 +4,41 @@ import { isPermittedPlaybackAsset } from "@/lib/image-policy"
 import { FeaturedCarousel } from "./featured-carousel"
 import { selectPlaybackAsset } from "@/lib/series"
 import { getHomeData } from "@/lib/viewer-data"
+import { getOptionalUser } from "@/lib/auth/access"
+import { premiumCatalogueAccess } from "@/services/billing/access"
 
-const allowedAsset = (content: {
-  isPremium: boolean
-  videoAssets: Array<{
+const allowedAsset = (
+  content: {
     id: string
-    isPlayable: boolean
-    sourceType: string
-    playbackUrl: string | null
-    storedObject?: { state: string } | null
-  }>
-}) => (content.isPremium ? undefined : selectPlaybackAsset(content.videoAssets))
+    isPremium: boolean
+    videoAssets: Array<{
+      id: string
+      isPlayable: boolean
+      sourceType: string
+      playbackUrl: string | null
+      storedObject?: { state: string } | null
+    }>
+  },
+  allowed: Set<string>
+) =>
+  content.isPremium && !allowed.has(content.id)
+    ? undefined
+    : selectPlaybackAsset(
+        content.videoAssets.filter(
+          (a) => !content.isPremium || a.sourceType === "MANAGED"
+        )
+      )
 
 export default async function Home() {
   const { content, collections, featured, viewer } = await getHomeData()
+  const user = await getOptionalUser()
+  const allowed = await premiumCatalogueAccess(user?.user.id, [
+    ...content,
+    ...(viewer?.watchlist.map((i) => i.content) ?? []),
+    ...(viewer?.progress.flatMap((i) =>
+      i.content ? [i.content] : i.episode ? [i.episode.season.series] : []
+    ) ?? []),
+  ])
   if (!featured)
     return (
       <section className="gv-container py-24 text-center">
@@ -49,7 +70,7 @@ export default async function Home() {
       classification: item.classification,
       releaseYear: item.releaseYear,
       contentType: item.contentType,
-      assetId: allowedAsset(item)?.id ?? null,
+      assetId: allowedAsset(item, allowed)?.id ?? null,
       trailerId: item.trailer?.youtubeVideoId ?? null,
       isFeatured: item.isFeatured,
     }))
@@ -70,9 +91,10 @@ export default async function Home() {
               {viewer.progress.map((item) => {
                 const title = item.content ?? item.episode?.season.series
                 const asset =
-                  (!title?.isPremium
+                  (!title?.isPremium || allowed.has(title.id)
                     ? item.episode?.videoAssets.find(isPermittedPlaybackAsset)
-                    : undefined) ?? (title ? allowedAsset(title) : undefined)
+                    : undefined) ??
+                  (title ? allowedAsset(title, allowed) : undefined)
                 const percent = item.durationSeconds
                   ? (item.positionSeconds / item.durationSeconds) * 100
                   : 0

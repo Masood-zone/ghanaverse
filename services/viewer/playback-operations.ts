@@ -11,9 +11,10 @@ import {
 } from "@/lib/playback-metrics"
 import { playbackSessionSchema } from "@/lib/validation/playback"
 import { canViewContent } from "@/lib/viewer-policy"
+import { authorizePremium } from "@/services/billing/access"
 import type { sessionTelemetrySchema } from "@/lib/validation/playback"
 
-export async function permittedAsset(id: string) {
+export async function permittedAsset(id: string, userId?: string) {
   const asset = await getPrisma().videoAsset.findUnique({
     where: { id },
     include: {
@@ -29,13 +30,14 @@ export async function permittedAsset(id: string) {
       "VIDEO_NOT_FOUND",
       "Playable media was not found."
     )
-  if (content.isPremium || !isPermittedPlaybackAsset(asset))
+  if (!isPermittedPlaybackAsset(asset))
     throw new PlatformError(
       403,
       "PLAYBACK_NOT_PERMITTED",
       "Playback is not available for this title."
     )
-  return { asset, content }
+  const accessUntil = await authorizePremium(userId, content, asset.sourceType)
+  return { asset, content, accessUntil }
 }
 
 export async function startPlaybackSession(
@@ -44,7 +46,7 @@ export async function startPlaybackSession(
   raw: unknown
 ) {
   const input = playbackSessionSchema.parse(raw)
-  const { asset, content } = await permittedAsset(input.videoAssetId)
+  const { asset, content } = await permittedAsset(input.videoAssetId, userId)
   const profile = await getPrisma().viewerProfile.findFirst({
     where: { id: profileId, userId },
   })

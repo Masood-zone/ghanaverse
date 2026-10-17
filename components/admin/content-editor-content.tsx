@@ -1,4 +1,14 @@
 "use client"
+import {
+  FormSelect,
+  FormSwitch,
+  FormCheckbox,
+} from "@/components/ui/form-controls"
+import { SettingRow } from "@/components/ui/setting-row"
+import { SelectItem } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { useAdminOptions } from "@/services/admin/metadata"
 import { useAdminContentRecord } from "@/services/admin/content"
 import { useEffect } from "react"
@@ -346,90 +356,73 @@ function EditorForm({
                     ))}
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <label className="gv-label">
+                    <Label className="gv-label">
                       Content title
-                      <input className="gv-field" {...form.register("title")} />
+                      <Input {...form.register("title")} />
                       <FormError
                         message={form.formState.errors.title?.message}
                       />
-                    </label>
-                    <label className="gv-label">
+                    </Label>
+                    <Label className="gv-label">
                       URL slug
-                      <input
-                        className="gv-field"
+                      <Input
                         placeholder="Generated from title"
                         {...form.register("slug", {
                           setValueAs: (v) => v || undefined,
                         })}
                       />
-                    </label>
+                    </Label>
                   </div>
-                  <label className="gv-label">
+                  <Label className="gv-label">
                     Short logline / synopsis
-                    <textarea
-                      rows={3}
-                      className="gv-field"
-                      {...form.register("shortDescription")}
-                    />
+                    <Textarea rows={3} {...form.register("shortDescription")} />
                     <FormError
                       message={form.formState.errors.shortDescription?.message}
                     />
-                  </label>
-                  <label className="gv-label">
+                  </Label>
+                  <Label className="gv-label">
                     Full description
-                    <textarea
-                      rows={6}
-                      className="gv-field"
-                      {...form.register("description")}
-                    />
+                    <Textarea rows={6} {...form.register("description")} />
                     <FormError
                       message={form.formState.errors.description?.message}
                     />
-                  </label>
-                  <label className="gv-label">
+                  </Label>
+                  <Label className="gv-label">
                     Tagline
-                    <input className="gv-field" {...form.register("tagline")} />
-                  </label>
+                    <Input {...form.register("tagline")} />
+                  </Label>
                   <div className="grid gap-4 md:grid-cols-3">
-                    <label className="gv-label">
+                    <Label className="gv-label">
                       Release year
-                      <input
+                      <Input
                         type="number"
                         min="1890"
                         max="2100"
-                        className="gv-field"
                         {...form.register("releaseYear", {
                           setValueAs: toOptionalNumber,
                         })}
                       />
-                    </label>
-                    <label className="gv-label">
+                    </Label>
+                    <Label className="gv-label">
                       Country
-                      <input
-                        className="gv-field"
-                        {...form.register("country")}
-                      />
-                    </label>
+                      <Input {...form.register("country")} />
+                    </Label>
                     {type !== "SERIES" ? (
-                      <label className="gv-label">
+                      <Label className="gv-label">
                         Runtime (minutes)
-                        <input
+                        <Input
                           type="number"
                           min="1"
-                          className="gv-field"
                           {...form.register("runtimeMinutes", {
                             setValueAs: toOptionalNumber,
                           })}
                         />
-                      </label>
+                      </Label>
                     ) : (
-                      <label className="gv-label">
+                      <Label className="gv-label">
                         Series status
-                        <input
-                          className="gv-field"
-                          {...form.register("seriesStatus")}
-                        />
-                      </label>
+                        <Input {...form.register("seriesStatus")} />
+                      </Label>
                     )}
                   </div>
                 </section>
@@ -443,36 +436,36 @@ function EditorForm({
                   <h2 className="text-xl font-bold text-primary">
                     Classification & Metadata
                   </h2>
-                  <label className="gv-label">
+                  <Label className="gv-label">
                     Audience classification
-                    <select
+                    <FormSelect
                       aria-label="Audience classification"
-                      className="gv-field"
-                      {...form.register("classification")}
+                      control={form.control}
+                      name="classification"
                     >
-                      <option value="">Not assigned</option>
+                      <SelectItem value="">Not assigned</SelectItem>
                       {options.classifications.map((item) => (
-                        <option key={item.id} value={item.name}>
+                        <SelectItem key={item.id} value={item.name}>
                           {item.name}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                  </label>
+                    </FormSelect>
+                  </Label>
                   <div>
                     <p className="gv-label mb-3">Genres</p>
                     <div className="flex flex-wrap gap-4">
                       {options.genres.map((item) => (
-                        <label
+                        <Label
                           className="flex items-center gap-2 text-xs"
                           key={item.id}
                         >
-                          <input
-                            type="checkbox"
+                          <FormCheckbox
                             value={item.id}
-                            {...form.register("genreIds")}
+                            control={form.control}
+                            name="genreIds"
                           />
                           {item.name}
-                        </label>
+                        </Label>
                       ))}
                     </div>
                   </div>
@@ -480,17 +473,17 @@ function EditorForm({
                     <p className="gv-label mb-3">Languages</p>
                     <div className="flex flex-wrap gap-4">
                       {options.languages.map((item) => (
-                        <label
+                        <Label
                           className="flex items-center gap-2 text-xs"
                           key={item.id}
                         >
-                          <input
-                            type="checkbox"
+                          <FormCheckbox
                             value={item.id}
-                            {...form.register("languageIds")}
+                            control={form.control}
+                            name="languageIds"
                           />
                           {item.name}
-                        </label>
+                        </Label>
                       ))}
                     </div>
                   </div>
@@ -505,21 +498,21 @@ function EditorForm({
                   <h2 className="text-xl font-bold text-primary">
                     Creative Leadership
                   </h2>
-                  <label className="gv-label">
+                  <Label className="gv-label">
                     Production company
-                    <select
+                    <FormSelect
                       aria-label="Production company"
-                      className="gv-field"
-                      {...form.register("productionCompanyId")}
+                      control={form.control}
+                      name="productionCompanyId"
                     >
-                      <option value="">Not assigned</option>
+                      <SelectItem value="">Not assigned</SelectItem>
                       {options.companies.map((item) => (
-                        <option key={item.id} value={item.id}>
+                        <SelectItem key={item.id} value={item.id}>
                           {item.name}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                  </label>
+                    </FormSelect>
+                  </Label>
                   <p className="text-xs text-slate-600">
                     Manage external creators in the Creators section, then
                     assign credits here.
@@ -529,40 +522,41 @@ function EditorForm({
                       key={credit.id}
                       className="grid gap-3 rounded-lg bg-white p-4 md:grid-cols-2"
                     >
-                      <label className="gv-label">
+                      <Label className="gv-label">
                         Person
-                        <select
+                        <FormSelect
                           aria-label="Person"
-                          className="gv-field"
-                          {...form.register(`credits.${index}.personId`)}
+                          control={form.control}
+                          name={`credits.${index}.personId`}
                         >
-                          <option value="">Choose creator</option>
+                          <SelectItem value="">Choose creator</SelectItem>
                           {options.people.map((person) => (
-                            <option key={person.id} value={person.id}>
+                            <SelectItem key={person.id} value={person.id}>
                               {person.name}
-                            </option>
+                            </SelectItem>
                           ))}
-                        </select>
-                      </label>
-                      <label className="gv-label">
+                        </FormSelect>
+                      </Label>
+                      <Label className="gv-label">
                         Credit
-                        <select
+                        <FormSelect
                           aria-label="Credit"
-                          className="gv-field"
-                          {...form.register(`credits.${index}.creditType`)}
+                          control={form.control}
+                          name={`credits.${index}.creditType`}
                         >
                           {Object.values(CreditType).map((role) => (
-                            <option key={role}>{role}</option>
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
                           ))}
-                        </select>
-                      </label>
-                      <label className="gv-label">
+                        </FormSelect>
+                      </Label>
+                      <Label className="gv-label">
                         Character / credit description
-                        <input
-                          className="gv-field"
+                        <Input
                           {...form.register(`credits.${index}.characterName`)}
                         />
-                      </label>
+                      </Label>
                       <button
                         type="button"
                         className="text-xs text-red-700"
@@ -596,47 +590,45 @@ function EditorForm({
                   <h2 className="text-xl font-bold text-primary">
                     Rights & Licensing
                   </h2>
-                  <label className="gv-label">
+                  <Label className="gv-label">
                     Rights holder
-                    <select
+                    <FormSelect
                       aria-label="Rights holder"
-                      className="gv-field"
-                      {...form.register("rightsHolderId")}
+                      control={form.control}
+                      name="rightsHolderId"
                       disabled={scope === "creator" && Boolean(record)}
                     >
-                      <option value="">Not assigned</option>
+                      <SelectItem value="">Not assigned</SelectItem>
                       {options.rightsHolders.map((item) => (
-                        <option key={item.id} value={item.id}>
+                        <SelectItem key={item.id} value={item.id}>
                           {item.name}
                           {item.memberships?.length
                             ? ` — ${item.memberships.map((m) => m.user.name).join(", ")}`
                             : scope === "admin"
                               ? " (no linked account)"
                               : ""}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                  </label>
-                  <label className="gv-label">
+                    </FormSelect>
+                  </Label>
+                  <Label className="gv-label">
                     Media rights
-                    <select
+                    <FormSelect
                       aria-label="Media rights"
-                      className="gv-field"
-                      {...form.register("mediaRights")}
+                      control={form.control}
+                      name="mediaRights"
                     >
                       {Object.values(MediaRights).map((right) => (
-                        <option key={right}>{right}</option>
+                        <SelectItem key={right} value={right}>
+                          {right}
+                        </SelectItem>
                       ))}
-                    </select>
-                  </label>
-                  <label className="gv-label">
+                    </FormSelect>
+                  </Label>
+                  <Label className="gv-label">
                     Private attribution / rights notes
-                    <textarea
-                      rows={5}
-                      className="gv-field"
-                      {...form.register("attributionNotes")}
-                    />
-                  </label>
+                    <Textarea rows={5} {...form.register("attributionNotes")} />
+                  </Label>
                 </section>
                 <section
                   hidden={active !== "publishing"}
@@ -649,10 +641,36 @@ function EditorForm({
                     Publication Readiness
                   </h2>
                   {scope === "admin" ? (
-                    <label className="flex gap-2 text-sm">
-                      <input type="checkbox" {...form.register("isFeatured")} />
-                      Feature this title in the catalogue
-                    </label>
+                    <SettingRow
+                      title="Premium Pass required"
+                      description="An approved licence and private video are needed to publish this premium title."
+                      icon="workspace_premium"
+                    >
+                      {({ labelId, descriptionId }) => (
+                        <FormSwitch
+                          control={form.control}
+                          name="isPremium"
+                          aria-labelledby={labelId}
+                          aria-describedby={descriptionId}
+                        />
+                      )}
+                    </SettingRow>
+                  ) : null}
+                  {scope === "admin" ? (
+                    <SettingRow
+                      title="Feature in catalogue"
+                      description="Highlight this title as featured in the catalogue."
+                      icon="star"
+                    >
+                      {({ labelId, descriptionId }) => (
+                        <FormSwitch
+                          control={form.control}
+                          name="isFeatured"
+                          aria-labelledby={labelId}
+                          aria-describedby={descriptionId}
+                        />
+                      )}
+                    </SettingRow>
                   ) : null}
                   <p className="text-xs leading-6 text-slate-600">
                     Publication uses saved data. Playback is optional; viewers

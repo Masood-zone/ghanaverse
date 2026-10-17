@@ -28,13 +28,16 @@ export async function playbackSource(
   })
   if (!asset)
     throw new PlatformError(404, "VIDEO_NOT_FOUND", "Video was not found.")
+  let accessUntil: Date | null = null
   if (preview) {
     const contentId = asset.contentId ?? asset.episode?.season.seriesId
     if (!contentId)
       throw new PlatformError(404, "VIDEO_NOT_FOUND", "Video was not found.")
     await contentAccess(db, actorId, contentId)
   } else {
-    const { content } = await permittedAsset(assetId)
+    const permitted = await permittedAsset(assetId, actorId)
+    const { content } = permitted
+    accessUntil = permitted.accessUntil
     const profile = profileId
       ? await db.viewerProfile.findFirst({
           where: { id: profileId, userId: actorId },
@@ -61,7 +64,20 @@ export async function playbackSource(
         "This managed video is not ready for playback."
       )
     try {
-      return { kind: "native", ...(await r2.playback(asset.storedObject)) }
+      const seconds = accessUntil
+        ? Math.min(300, Math.floor((accessUntil.getTime() - Date.now()) / 1000))
+        : 3600
+      if (seconds < 1)
+        throw new PlatformError(
+          403,
+          "PREMIUM_REQUIRED",
+          "Your premium access has expired. Renew access from Plans."
+        )
+      return {
+        kind: "native",
+        ...(await r2.playback(asset.storedObject, seconds)),
+        accessExpiresAt: accessUntil?.toISOString() ?? null,
+      }
     } catch (error) {
       return safeR2Error(error)
     }
@@ -92,6 +108,12 @@ export async function selectVideoAsset(
       if (!asset || !contentId)
         throw new PlatformError(404, "VIDEO_NOT_FOUND", "Video was not found.")
       const content = await contentAccess(tx, actorId, contentId, true)
+      if (enabled && content.isPremium && asset.sourceType !== "MANAGED")
+        throw new PlatformError(
+          400,
+          "PRIVATE_VIDEO_REQUIRED",
+          "Premium content requires private managed video."
+        )
       if (
         enabled &&
         ["UNKNOWN", "DEMO"].includes(asset.licenseType) &&

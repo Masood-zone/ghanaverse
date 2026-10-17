@@ -225,6 +225,8 @@ export async function mutateMedia({
           "YOUTUBE_PREMIUM",
           "YouTube videos cannot be offered as paid playback."
         )
+      if (parent.isPremium)
+        throw new PlatformError(400, "PRIVATE_VIDEO_REQUIRED", "Upload a private managed video for premium content.")
       if (
         input.isPlayable &&
         ["UNKNOWN", "DEMO"].includes(input.licenseType) &&

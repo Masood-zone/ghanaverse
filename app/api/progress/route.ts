@@ -8,6 +8,7 @@ import { requireActiveProfile } from "@/lib/profiles"
 import { PlatformError, routeError } from "@/lib/route-error"
 import { recordPlaybackSample } from "@/services/viewer/playback-operations"
 import { canViewContent } from "@/lib/viewer-policy"
+import { authorizePremium } from "@/services/billing/access"
 
 export async function PUT(request: Request) {
   try {
@@ -53,12 +54,7 @@ export async function PUT(request: Request) {
         "PROFILE_CONTENT_RESTRICTED",
         "This title is not available in Kids mode."
       )
-    if (parent.isPremium)
-      throw new PlatformError(
-        403,
-        "PREMIUM_REQUIRED",
-        "Premium playback is not available in this phase."
-      )
+    await authorizePremium(user.id, parent, asset.sourceType)
     const durationSeconds = input.durationSeconds ?? asset.durationSeconds
     const completed =
       input.completed ||

@@ -1,4 +1,4 @@
-import { FoundationPage } from "@/components/layout/foundation-page"
+import { LicensingContent } from "@/components/billing/licensing-content"
 import { requireAdminPage } from "@/lib/auth/access"
 import { callbackWithSearch, type PageSearchParams } from "@/lib/auth/callback"
 
@@ -11,10 +11,6 @@ export default async function Page({
     callbackWithSearch("/admin/royalties", await searchParams)
   )
   return (
-    <FoundationPage
-      eyebrow="Administration"
-      title="Royalties"
-      description="Royalty calculations are intentionally deferred."
-    />
+    <LicensingContent admin />
   )
 }

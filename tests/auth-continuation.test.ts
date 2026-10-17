@@ -28,6 +28,18 @@ beforeEach(() => {
   dependencies.isAdminRole.mockImplementation((role) => role === "ADMIN")
 })
 describe("post-authentication routing", () => {
+  it.each(["/plans?step=payment", "/plans/result?reference=gv-owned"])(
+    "preserves billing callback %s for admins",
+    async (callbackUrl) => {
+      dependencies.requireUserPage.mockResolvedValue({
+        user: { id: "admin-user", role: "ADMIN" },
+      })
+      dependencies.profiles.mockResolvedValue([])
+      await expect(
+        AuthContinuationPage({ searchParams: Promise.resolve({ callbackUrl }) })
+      ).rejects.toThrow(`REDIRECT:${callbackUrl}`)
+    }
+  )
   it("sends admins straight to the admin dashboard", async () => {
     dependencies.requireUserPage.mockResolvedValue({
       user: { id: "admin-user", role: "ADMIN" },

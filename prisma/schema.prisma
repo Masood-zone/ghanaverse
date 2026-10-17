@@ -73,23 +73,25 @@ model User {
   profiles                ViewerProfile[]
   rightsHolderMemberships RightsHolderMembership[]
   playbackSessions        PlaybackSession[]
+  payments                BillingPayment[]
+  premiumGrants           PremiumGrant[]
 }
 
 model ViewerProfile {
-  id               String            @id @default(cuid())
-  userId           String
-  name             String
-  avatar           String?
-  image            String?
-  isKids           Boolean           @default(false)
-  autoplayNextEpisode Boolean        @default(false)
-  preferSubtitles  Boolean           @default(false)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  watchlist        WatchlistItem[]
-  progress         WatchProgress[]
-  playbackSessions PlaybackSession[]
+  id                  String            @id @default(cuid())
+  userId              String
+  name                String
+  avatar              String?
+  image               String?
+  isKids              Boolean           @default(false)
+  autoplayNextEpisode Boolean           @default(false)
+  preferSubtitles     Boolean           @default(false)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  watchlist           WatchlistItem[]
+  progress            WatchProgress[]
+  playbackSessions    PlaybackSession[]
 
   @@index([userId])
 }
@@ -141,6 +143,7 @@ model Content {
   progress             WatchProgress[]
   collectionItems      CollectionItem[]
   playbackSessions     PlaybackSession[]
+  licenses             ContentLicense[]
 
   @@unique([metadataSource, externalId])
   @@index([publicationStatus, contentType])
@@ -220,6 +223,8 @@ model RightsHolder {
   website      String?
   contents     Content[]
   memberships  RightsHolderMembership[]
+  licenses     ContentLicense[]
+  recipients   PayoutRecipient[]
 }
 
 model RightsHolderMembership {
@@ -271,45 +276,45 @@ model Episode {
 }
 
 model VideoAsset {
-  id               String            @id @default(cuid())
+  id               String             @id @default(cuid())
   contentId        String?
   episodeId        String?
   sourceType       VideoSourceType
   playbackUrl      String?
-  storedObjectId   String?           @unique
+  storedObjectId   String?            @unique
   storedObject     StoredVideoObject? @relation(fields: [storedObjectId], references: [id], onDelete: Restrict)
   durationSeconds  Int?
   licenseType      MediaRights
-  isPlayable       Boolean           @default(false)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  content          Content?          @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  episode          Episode?          @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  isPlayable       Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  content          Content?           @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  episode          Episode?           @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   playbackSessions PlaybackSession[]
 }
 
 model PlaybackSession {
-  id                  String           @id @default(cuid())
-  idempotencyKey      String           @unique
-  userId              String
-  profileId           String
-  videoAssetId        String
-  contentId           String
-  episodeId           String?
-  startedAt           DateTime         @default(now())
-  lastSampleAt        DateTime         @default(now())
-  lastSequence        Int              @default(0)
-  watchedMilliseconds Int              @default(0)
-  reportedMilliseconds Int             @default(0)
-  durationSeconds     Float?
-  coverage            Json             @default("[]")
-  completedAt         DateTime?
-  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile             ViewerProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  videoAsset          VideoAsset       @relation(fields: [videoAssetId], references: [id], onDelete: Cascade)
-  content             Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  episode             Episode?         @relation(fields: [episodeId], references: [id], onDelete: Cascade)
-  samples             PlaybackSample[]
+  id                   String           @id @default(cuid())
+  idempotencyKey       String           @unique
+  userId               String
+  profileId            String
+  videoAssetId         String
+  contentId            String
+  episodeId            String?
+  startedAt            DateTime         @default(now())
+  lastSampleAt         DateTime         @default(now())
+  lastSequence         Int              @default(0)
+  watchedMilliseconds  Int              @default(0)
+  reportedMilliseconds Int              @default(0)
+  durationSeconds      Float?
+  coverage             Json             @default("[]")
+  completedAt          DateTime?
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile              ViewerProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  videoAsset           VideoAsset       @relation(fields: [videoAssetId], references: [id], onDelete: Cascade)
+  content              Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  episode              Episode?         @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  samples              PlaybackSample[]
 
   @@index([contentId, startedAt])
   @@index([userId, startedAt])
@@ -445,36 +450,36 @@ model ArtworkAsset {
 
 // Provider identifiers are private. Reservations survive failed provider operations.
 model VideoUploadSession {
-  id              String   @id
-  idempotencyKey  String   @unique
-  actorId         String
-  contentId       String
-  episodeId       String?
-  destination     String
-  filename        String
-  fileSize        BigInt
-  lastModified    Float
-  fingerprint     String
-  licenseType     MediaRights
-  mediaMetadata   Json
-  endpoint        String
-  bucket          String
-  objectKey       String   @unique
+  id                  String                   @id
+  idempotencyKey      String                   @unique
+  actorId             String
+  contentId           String
+  episodeId           String?
+  destination         String
+  filename            String
+  fileSize            BigInt
+  lastModified        Float
+  fingerprint         String
+  licenseType         MediaRights
+  mediaMetadata       Json
+  endpoint            String
+  bucket              String
+  objectKey           String                   @unique
   processingObjectKey String?
-  processingBytes BigInt?
-  sourceDeleted   Boolean  @default(false)
-  providerUploadId String?
-  status          String   @default("INITIALIZING")
-  expiresAt       DateTime
-  leaseToken      String?
-  leaseUntil      DateTime?
-  lastError       String?
-  assetId         String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  reservation     VideoStorageReservation?
-  parts           VideoUploadPart[]
-  storedObject    StoredVideoObject?
+  processingBytes     BigInt?
+  sourceDeleted       Boolean                  @default(false)
+  providerUploadId    String?
+  status              String                   @default("INITIALIZING")
+  expiresAt           DateTime
+  leaseToken          String?
+  leaseUntil          DateTime?
+  lastError           String?
+  assetId             String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  reservation         VideoStorageReservation?
+  parts               VideoUploadPart[]
+  storedObject        StoredVideoObject?
 
   @@index([contentId, status])
   @@index([expiresAt, status])
@@ -482,39 +487,169 @@ model VideoUploadSession {
 }
 
 model VideoUploadPart {
-  sessionId String
+  sessionId  String
   partNumber Int
-  md5       String
-  session   VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  md5        String
+  session    VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
   @@id([sessionId, partNumber])
 }
 
 model VideoProcessorHeartbeat {
-  id String @id
+  id     String   @id
   seenAt DateTime
 }
 
+model BillingPlan {
+  id                  String           @id @default("premium")
+  amount              Int              @default(4500)
+  currency            String           @default("GHS")
+  days                Int              @default(30)
+  enabled             Boolean          @default(true)
+  commercialConfirmed Boolean          @default(false)
+  updatedAt           DateTime         @updatedAt
+  payments            BillingPayment[]
+}
+
+model BillingPayment {
+  id             String        @id @default(cuid())
+  reference      String        @unique
+  idempotencyKey String
+  userId         String
+  planId         String
+  mode           String
+  amount         Int
+  currency       String        @default("GHS")
+  days           Int           @default(30)
+  email          String
+  channel        String
+  mobileMoneyNetwork String?
+  maskedPayerPhone String?
+  status         String        @default("PENDING")
+  providerId     String?
+  checkoutUrl    String?
+  fee            Int?
+  refundAmount   Int           @default(0)
+  reviewRequired Boolean       @default(false)
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  plan           BillingPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  grant          PremiumGrant?
+
+  @@unique([userId, mode, idempotencyKey])
+  @@index([userId, mode, createdAt])
+  @@index([mode, status])
+}
+
+model PremiumGrant {
+  id        String         @id @default(cuid())
+  paymentId String         @unique
+  userId    String
+  mode      String
+  startsAt  DateTime
+  endsAt    DateTime
+  revokedAt DateTime?
+  payment   BillingPayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, mode, endsAt])
+}
+
+model ContentLicense {
+  id                String          @id @default(cuid())
+  contentId         String
+  rightsHolderId    String
+  startsAt          DateTime
+  endsAt            DateTime
+  dueAt             DateTime
+  amount            Int
+  currency          String          @default("GHS")
+  contractReference String
+  commercialUse     Boolean
+  status            String          @default("DRAFT")
+  approvedById      String?
+  createdAt         DateTime        @default(now())
+  content           Content         @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  rightsHolder      RightsHolder    @relation(fields: [rightsHolderId], references: [id], onDelete: Restrict)
+  payouts           PayoutAttempt[]
+
+  @@index([contentId, status, startsAt, endsAt])
+}
+
+model PayoutRecipient {
+  id             String          @id @default(cuid())
+  rightsHolderId String
+  mode           String
+  type           String
+  name           String
+  bankCode       String
+  maskedAccount  String
+  providerCode   String
+  status         String          @default("PENDING")
+  approvedById   String?
+  createdAt      DateTime        @default(now())
+  rightsHolder   RightsHolder    @relation(fields: [rightsHolderId], references: [id], onDelete: Restrict)
+  payouts        PayoutAttempt[]
+
+  @@unique([mode, providerCode])
+  @@index([rightsHolderId, mode, status])
+}
+
+model PayoutAttempt {
+  id             String          @id @default(cuid())
+  licenseId      String
+  recipientId    String
+  mode           String
+  reference      String          @unique
+  amount         Int
+  currency       String          @default("GHS")
+  recipientCode  String
+  recipientLabel String
+  status         String          @default("APPROVED")
+  approvedById   String
+  transferCode   String?
+  leaseUntil     DateTime?
+  lastError      String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  license        ContentLicense  @relation(fields: [licenseId], references: [id], onDelete: Restrict)
+  recipient      PayoutRecipient @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+
+  @@index([licenseId, mode, status])
+}
+
+model PaymentWebhook {
+  id          String   @id
+  mode        String
+  event       String
+  resourceId  String
+  processedAt DateTime @default(now())
+}
+
 model VideoStorageReservation {
-  sessionId String @id
-  bytes BigInt
+  sessionId  String             @id
+  bytes      BigInt
   releasedAt DateTime?
-  session VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  session    VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
 }
 
 model StoredVideoObject {
-  id String @id
-  sessionId String @unique
-  endpoint String
-  bucket String
-  objectKey String @unique
-  bytes BigInt
-  etag String
-  state String @default("READY")
-  metadata Json
+  id        String             @id
+  sessionId String             @unique
+  endpoint  String
+  bucket    String
+  objectKey String             @unique
+  bytes     BigInt
+  etag      String
+  state     String             @default("READY")
+  metadata  Json
   lastError String?
-  createdAt DateTime @default(now())
+  createdAt DateTime           @default(now())
   deletedAt DateTime?
-  session VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
-  asset VideoAsset?
+  session   VideoUploadSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  asset     VideoAsset?
+
   @@index([state])
 }

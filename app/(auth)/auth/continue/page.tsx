@@ -11,7 +11,8 @@ export default async function AuthContinuationPage({
 }) {
   const destination = safeCallbackUrl((await searchParams).callbackUrl)
   const { user } = await requireUserPage(destination)
-  if (isAdminRole(user.role)) redirect("/admin")
+  if (isAdminRole(user.role) && !/^\/plans(?:[/?]|$)/.test(destination))
+    redirect("/admin")
   const profiles = await getPrisma().viewerProfile.findMany({
     where: { userId: user.id },
     select: { id: true },

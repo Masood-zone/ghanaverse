@@ -15,6 +15,7 @@ const navigation = [
   ["Users", "/admin/users", "group"],
   ["Activity", "/admin/activity", "history"],
   ["Analytics", "/admin/analytics", "analytics"],
+  ["Licensing & Payouts", "/admin/royalties", "payments"],
 ] as const
 export function DashboardShell({
   children,

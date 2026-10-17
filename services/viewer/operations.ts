@@ -4,6 +4,7 @@ import { getActiveProfile } from "@/lib/profiles"
 import { getLibraryData } from "@/lib/viewer-data"
 import { isPermittedPlaybackAsset } from "@/lib/image-policy"
 import type { LibraryData, LibraryTitle } from "@/types/viewer"
+import { premiumCatalogueAccess } from "@/services/billing/access"
 export async function getProfilesData(userId: string) {
   const [profiles, active] = await Promise.all([
     getPrisma().viewerProfile.findMany({
@@ -26,7 +27,7 @@ export async function getProfilesData(userId: string) {
 type Title = Awaited<
   ReturnType<typeof getLibraryData>
 >["watchlist"][number]["content"]
-function libraryTitle(content: Title): LibraryTitle {
+function libraryTitle(content: Title, premiumAllowed = false): LibraryTitle {
   return {
     id: content.id,
     slug: content.slug,
@@ -44,17 +45,31 @@ function libraryTitle(content: Title): LibraryTitle {
     languages: content.languages.map((l) => ({
       language: { name: l.language.name },
     })),
-    videoAssets: content.isPremium
-      ? []
-      : content.videoAssets.filter(isPermittedPlaybackAsset).map((a) => ({
-          id: a.id,
-          sourceType: a.sourceType,
-          isPlayable: true,
-        })),
+    videoAssets:
+      content.isPremium && !premiumAllowed
+        ? []
+        : content.videoAssets
+            .filter(
+              (a) =>
+                (!content.isPremium || a.sourceType === "MANAGED") &&
+                isPermittedPlaybackAsset(a)
+            )
+            .map((a) => ({
+              id: a.id,
+              sourceType: a.sourceType,
+              isPlayable: true,
+            })),
   }
 }
 export async function getViewerLibrary(userId: string): Promise<LibraryData> {
   const data = await getLibraryData(userId)
+  const contents = [
+    ...data.watchlist.map((i) => i.content),
+    ...data.history.flatMap((i) =>
+      i.content ? [i.content] : i.episode ? [i.episode.season.series] : []
+    ),
+  ]
+  const allowed = await premiumCatalogueAccess(userId, contents)
   return {
     profile: data.profile
       ? {
@@ -69,7 +84,7 @@ export async function getViewerLibrary(userId: string): Promise<LibraryData> {
       : null,
     watchlist: data.watchlist.map((item) => ({
       id: item.id,
-      content: libraryTitle(item.content),
+      content: libraryTitle(item.content, allowed.has(item.content.id)),
     })),
     history: data.history.map((item) => ({
       id: item.id,
@@ -77,22 +92,36 @@ export async function getViewerLibrary(userId: string): Promise<LibraryData> {
       durationSeconds: item.durationSeconds,
       completed: item.completed,
       lastWatchedAt: item.lastWatchedAt.toISOString(),
-      content: item.content ? libraryTitle(item.content) : null,
+      content: item.content
+        ? libraryTitle(item.content, allowed.has(item.content.id))
+        : null,
       episode: item.episode
         ? {
             id: item.episode.id,
             title: item.episode.title,
             thumbnailUrl: item.episode.thumbnailUrl,
-            videoAssets: item.episode.season.series.isPremium
-              ? []
-              : item.episode.videoAssets
-                  .filter(isPermittedPlaybackAsset)
-                  .map((a) => ({
-                    id: a.id,
-                    sourceType: a.sourceType,
-                    isPlayable: true,
-                  })),
-            season: { series: libraryTitle(item.episode.season.series) },
+            videoAssets:
+              item.episode.season.series.isPremium &&
+              !allowed.has(item.episode.season.series.id)
+                ? []
+                : item.episode.videoAssets
+                    .filter(
+                      (a) =>
+                        (!item.episode?.season.series.isPremium ||
+                          a.sourceType === "MANAGED") &&
+                        isPermittedPlaybackAsset(a)
+                    )
+                    .map((a) => ({
+                      id: a.id,
+                      sourceType: a.sourceType,
+                      isPlayable: true,
+                    })),
+            season: {
+              series: libraryTitle(
+                item.episode.season.series,
+                allowed.has(item.episode.season.series.id)
+              ),
+            },
           }
         : null,
     })),

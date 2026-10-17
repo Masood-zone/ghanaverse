@@ -1,4 +1,6 @@
 "use client"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -6,7 +8,15 @@ import { api } from "@/lib/api-client"
 import { authClient } from "@/lib/auth-client"
 import { PhotoUpload } from "./photo-upload"
 import type { AccountData } from "@/types/viewer"
-export function PersonalDetailsForm({ user }: { user: AccountData }) {
+import { MaterialSymbol } from "@/components/common/MaterialSymbol"
+export function PersonalDetailsForm({
+  user,
+  compact = false,
+}: {
+  user: AccountData
+  compact?: boolean
+}) {
+  const [editing, setEditing] = useState(!compact)
   const [name, setName] = useState(user.name)
   const [image, setImage] = useState(user.image)
   const [photoAssetId, setPhotoAssetId] = useState<string | null | undefined>()
@@ -25,12 +35,53 @@ export function PersonalDetailsForm({ user }: { user: AccountData }) {
     },
   })
   return (
-    <section className="mt-8 rounded-xl border bg-white p-5 md:p-7">
-      <h2 className="text-xl font-bold">Personal Details</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Your account identity is separate from each viewer profile.
-      </p>
+    <section
+      className={
+        compact ? "gv-sub-card" : "mt-8 rounded-xl border bg-white p-5 md:p-7"
+      }
+    >
+      <div className={compact ? "gv-sub-section-heading" : ""}>
+        {compact ? (
+          <span>
+            <MaterialSymbol icon="person" />
+          </span>
+        ) : null}
+        <div>
+          <h2 className={compact ? "" : "text-xl font-bold"}>
+            Personal Details
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your account identity is separate from each viewer profile.
+          </p>
+        </div>
+        {compact ? (
+          <button
+            type="button"
+            aria-expanded={editing}
+            onClick={() => setEditing(!editing)}
+          >
+            {editing ? "Close editor" : "✎ Edit Profile"}
+          </button>
+        ) : null}
+      </div>
+      {compact && !editing ? (
+        <div className="gv-sub-detail-grid">
+          <div className="gv-sub-inset">
+            <small>Full name</small>
+            <strong>{user.name}</strong>
+          </div>
+          <div className="gv-sub-inset">
+            <small>Email address</small>
+            <strong>{user.email}</strong>
+          </div>
+          <div className="gv-sub-inset">
+            <small>Account role</small>
+            <strong>{user.role.replaceAll("_", " ")}</strong>
+          </div>
+        </div>
+      ) : null}
       <form
+        hidden={!editing}
         className="mt-6 space-y-5"
         onSubmit={(event) => {
           event.preventDefault()
@@ -49,10 +100,9 @@ export function PersonalDetailsForm({ user }: { user: AccountData }) {
           }}
         />
         <div className="grid gap-5 sm:grid-cols-2">
-          <label className="gv-label">
+          <Label className="gv-label">
             Full name
-            <input
-              className="gv-field"
+            <Input
               required
               maxLength={180}
               autoComplete="name"
@@ -60,19 +110,14 @@ export function PersonalDetailsForm({ user }: { user: AccountData }) {
               disabled={mutation.isPending}
               onChange={(event) => setName(event.target.value)}
             />
-          </label>
-          <label className="gv-label">
+          </Label>
+          <Label className="gv-label">
             Email address
-            <input
-              className="gv-field"
-              value={user.email}
-              readOnly
-              type="email"
-            />
+            <Input value={user.email} readOnly type="email" />
             <span className="text-xs font-normal text-muted-foreground">
               Your sign-in email is read-only.
             </span>
-          </label>
+          </Label>
         </div>
         {mutation.error ? (
           <p role="alert" className="text-sm text-red-700">

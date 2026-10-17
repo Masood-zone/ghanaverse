@@ -30,6 +30,8 @@ Private R2 video uploads require the five `R2_*` values in `.env.example`. Follo
 
 ## Development and checks
 
+Premium Pass uses Paystack hosted checkout and fixed-fee creator licensing. See [billing and licensing setup](docs/BILLING_AND_LICENSING.md) for the additive migration, environment variables, webhook, design references, payout workflow, and live launch gates. GHS 45 for 30 days is provisional; pricing is editable in administrator Licensing & Payouts. `pnpm qa:billing` checks the two subscription screens against an isolated local test app.
+
 ```powershell
 pnpm lint
 pnpm typecheck

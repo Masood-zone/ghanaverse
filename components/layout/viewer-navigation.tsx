@@ -1,4 +1,5 @@
 "use client"
+import { Input } from "@/components/ui/input"
 
 import { Menu, Search } from "@/components/common/icons"
 import Link from "next/link"
@@ -8,10 +9,16 @@ import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 import { PersonAvatar } from "@/components/catalogue/content-artwork"
 import { useAccount } from "@/services/viewer/account"
+import { useSyncExternalStore } from "react"
+
+const subscribeHydration = () => () => {}
+const clientHydrated = () => true
+const serverHydrated = () => false
 
 const publicLinks = [
   ["Home", "/"],
   ["Browse / Catalogue", "/browse"],
+  ["Pricing", "/plans"],
   ["Search", "/search"],
 ] as const
 const memberLinks = [
@@ -20,7 +27,14 @@ const memberLinks = [
 ] as const
 
 export function ViewerNavigation() {
-  const { data: session } = authClient.useSession()
+  const hydrated = useSyncExternalStore(
+    subscribeHydration,
+    clientHydrated,
+    serverHydrated
+  )
+  const { data: currentSession } = authClient.useSession()
+  // Better Auth's browser cache can already be populated while SSR has no session.
+  const session = hydrated ? currentSession : null
   const pathname = usePathname()
   const { signOut, pending: signingOut } = useSignOut()
   const links = session ? [...publicLinks, ...memberLinks] : publicLinks
@@ -33,13 +47,28 @@ export function ViewerNavigation() {
         ? "bg-amber-100 text-amber-900"
         : "text-slate-600 hover:bg-muted hover:text-foreground"
     )
-  const activeProfile = account.data?.profiles.find(
-    (profile) => profile.id === account.data.activeId
-  )
+  const activeProfile = session
+    ? account.data?.profiles.find(
+        (profile) => profile.id === account.data.activeId
+      )
+    : undefined
   const accountMenu = (
     <>
       {account.data?.hasRightsHolderReports ? (
-        <Link href="/creator/content" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">Manage your content</Link>
+        <Link
+          href="/creator/earnings"
+          className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Licensing &amp; earnings
+        </Link>
+      ) : null}
+      {account.data?.hasRightsHolderReports ? (
+        <Link
+          href="/creator/content"
+          className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Manage your content
+        </Link>
       ) : null}
       {account.data?.hasRightsHolderReports ? (
         <Link
@@ -93,7 +122,7 @@ export function ViewerNavigation() {
       <div className="ml-auto hidden items-center gap-3 md:flex">
         <form action="/search" className="relative hidden xl:block">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             name="q"
             aria-label="Search titles"
             placeholder="Search titles…"

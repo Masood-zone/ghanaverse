@@ -1,10 +1,19 @@
-import { FoundationPage } from "@/components/layout/foundation-page"
-export default function PlansPage() {
-  return (
-    <FoundationPage
-      eyebrow="Plans"
-      title="Membership plans are not active yet."
-      description="Billing and subscription processing are intentionally deferred beyond the foundation phase."
-    />
-  )
+import { PlansContent } from "@/components/billing/plans-content"
+import { PaymentDetails } from "@/components/billing/payment-details"
+import { requireUserPage } from "@/lib/auth/access"
+export default async function PlansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ step?: string; reference?: string }>
+}) {
+  const { step, reference } = await searchParams
+  if (step === "payment") {
+    const ownedReference =
+      typeof reference === "string" && reference.length <= 100 ? reference : ""
+    await requireUserPage(
+      `/plans?step=payment${ownedReference ? `&reference=${encodeURIComponent(ownedReference)}` : ""}`
+    )
+    return <PaymentDetails reference={ownedReference} />
+  }
+  return <PlansContent />
 }
