@@ -310,8 +310,8 @@ function PaymentForm({
             ) : null}
             <p className="gv-sub-note text-center">
               {data.configuration.mode === "test"
-                ? "Test mode: use Paystack test details. No real funds are collected."
-                : "Access starts only after server verification."}
+                ? ""
+                : "Access starts only after payment."}
             </p>
           </form>
           <aside className="gv-sub-summary">
