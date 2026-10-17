@@ -1,4 +1,7 @@
 "use client"
+import { SelectField } from "@/components/ui/select-field"
+import { SelectItem } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import Link from "next/link"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
@@ -35,21 +38,21 @@ export function EpisodeBrowser({
     <section id="episodes" className="rounded-xl border bg-white p-5 md:p-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-extrabold">Episodes</h2>
-        <label className="text-sm font-semibold">
+        <Label className="text-sm font-semibold">
           Season{" "}
-          <select
+          <SelectField
             aria-label="Choose season"
             className="ml-2 rounded-md border bg-white p-2"
             value={seasonId}
-            onChange={(event) => setSeasonId(event.target.value)}
+            onValueChange={(event) => setSeasonId(event)}
           >
             {seasons.map(([id, number]) => (
-              <option key={id} value={id}>
+              <SelectItem key={id} value={id}>
                 Season {number}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-        </label>
+          </SelectField>
+        </Label>
       </div>
       {episodes.length ? (
         <div className="mt-5 space-y-3">

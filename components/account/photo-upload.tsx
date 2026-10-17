@@ -1,4 +1,5 @@
 "use client"
+import { Label } from "@/components/ui/label"
 import { useRef, useState } from "react"
 import { PersonAvatar } from "@/components/catalogue/content-artwork"
 import axios from "@/lib/axios"
@@ -77,7 +78,7 @@ export function PhotoUpload({
           className="h-20 w-20 text-2xl"
         />
         <div>
-          <label className="gv-action secondary cursor-pointer">
+          <Label className="gv-action secondary cursor-pointer">
             {busy ? "Uploading…" : image ? "Replace photo" : "Upload photo"}
             <input
               ref={input}
@@ -88,7 +89,7 @@ export function PhotoUpload({
               disabled={disabled || busy}
               onChange={(event) => void upload(event.target.files?.[0])}
             />
-          </label>
+          </Label>
           <p className="mt-2 text-xs text-muted-foreground">
             JPEG, PNG or WebP · up to 8 MB
           </p>

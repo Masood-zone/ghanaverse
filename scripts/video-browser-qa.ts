@@ -155,11 +155,17 @@ async function main() {
       )
     await page.getByRole("tab", { name: "People & Rights" }).click()
     await page
-      .getByLabel("Rights holder", { exact: true })
-      .selectOption(holderId)
+      .getByRole("combobox", { name: "Rights holder", exact: true })
+      .click()
     await page
-      .getByLabel("Media rights", { exact: true })
-      .selectOption("CREATIVE_COMMONS")
+      .getByRole("option", { name: `Temporary R2 QA ${suffix}`, exact: true })
+      .click()
+    await page
+      .getByRole("combobox", { name: "Media rights", exact: true })
+      .click()
+    await page
+      .getByRole("option", { name: "CREATIVE_COMMONS", exact: true })
+      .click()
     const saved = page.waitForResponse(
       (r) =>
         r.url().endsWith("/api/creator/content") &&

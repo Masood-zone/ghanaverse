@@ -1,4 +1,5 @@
 "use client"
+import { Label } from "@/components/ui/label"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -167,7 +168,7 @@ export default function UploadDrawer() {
                       {item.state === "failed" ? "Retry" : "Resume"}
                     </button>
                     {item.status !== "PROCESSING_FAILED" ? (
-                      <label className="cursor-pointer text-amber-900 underline">
+                      <Label className="cursor-pointer text-amber-900 underline">
                         Reselect video
                         <input
                           aria-label={`Reselect ${item.filename}`}
@@ -183,7 +184,7 @@ export default function UploadDrawer() {
                             e.currentTarget.value = ""
                           }}
                         />
-                      </label>
+                      </Label>
                     ) : null}
                   </>
                 )}

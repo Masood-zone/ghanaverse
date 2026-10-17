@@ -1,3 +1,6 @@
+import { SelectField } from "@/components/ui/select-field"
+import { SelectItem } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { Search } from "@/components/common/icons"
 import Link from "next/link"
 import { ContentCard } from "@/components/catalogue/content-card"
@@ -63,7 +66,7 @@ export async function CataloguePage({
           </p>
           <form action={route} className="relative mx-auto mt-7 max-w-2xl">
             <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-primary" />
-            <input
+            <Input
               name="q"
               defaultValue={query.q}
               placeholder="Search titles, cast, stories…"
@@ -211,18 +214,18 @@ function Filter({
   options: Array<readonly [string, string] | [string, string]>
 }) {
   return (
-    <select
+    <SelectField
       name={name}
       defaultValue={value ?? ""}
       aria-label={label}
       className="h-11 rounded-md border bg-white px-3 text-sm"
     >
-      <option value="">{label}</option>
+      <SelectItem value="">{label}</SelectItem>
       {options.map(([optionValue, optionLabel]) => (
-        <option key={optionValue} value={optionValue}>
+        <SelectItem key={optionValue} value={optionValue}>
           {optionLabel}
-        </option>
+        </SelectItem>
       ))}
-    </select>
+    </SelectField>
   )
 }

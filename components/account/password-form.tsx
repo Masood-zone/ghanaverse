@@ -1,4 +1,6 @@
 "use client"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { authClient } from "@/lib/auth-client"
@@ -48,20 +50,18 @@ export function PasswordForm() {
           }
         })}
       >
-        <label className="gv-label sm:col-span-2">
+        <Label className="gv-label sm:col-span-2">
           Current password
-          <input
-            className="gv-field"
+          <Input
             type="password"
             required
             autoComplete="current-password"
             {...form.register("currentPassword")}
           />
-        </label>
-        <label className="gv-label">
+        </Label>
+        <Label className="gv-label">
           New password
-          <input
-            className="gv-field"
+          <Input
             type="password"
             required
             minLength={8}
@@ -69,18 +69,17 @@ export function PasswordForm() {
             autoComplete="new-password"
             {...form.register("newPassword")}
           />
-        </label>
-        <label className="gv-label">
+        </Label>
+        <Label className="gv-label">
           Confirm new password
-          <input
-            className="gv-field"
+          <Input
             type="password"
             required
             autoComplete="new-password"
             {...form.register("confirmPassword")}
           />
           <FormError message={form.formState.errors.confirmPassword?.message} />
-        </label>
+        </Label>
         <div className="sm:col-span-2">
           <FormError message={error} />
           {message ? (

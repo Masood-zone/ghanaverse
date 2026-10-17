@@ -1,9 +1,12 @@
 "use client"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { FormSwitch } from "@/components/ui/form-controls"
+import { SettingRow } from "@/components/ui/setting-row"
 
 import { Check, Edit3, Plus, Trash2 } from "@/components/common/icons"
-import { MaterialSymbol } from "@/components/common/MaterialSymbol"
 import { useState, useEffect, useRef } from "react"
-import { Controller, useForm, useWatch } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { z } from "zod"
 import { profileSchema } from "@/lib/platform-validation"
@@ -281,15 +284,15 @@ function ProfileDialog({
             }}
           />
         </div>
-        <label className="mt-6 block text-sm font-bold">
+        <Label className="mt-6 block text-sm font-bold">
           Profile name
-          <input
+          <Input
             {...form.register("name")}
             aria-invalid={!!form.formState.errors.name}
             maxLength={40}
             className="mt-2 h-11 w-full rounded-md border px-3 font-normal"
           />
-        </label>
+        </Label>
         {form.formState.errors.name ? (
           <p role="alert" className="mt-2 text-xs text-red-700">
             {form.formState.errors.name.message}
@@ -321,56 +324,23 @@ function ProfileDialog({
           </p>
           <div className="mt-3 divide-y overflow-hidden rounded-xl border bg-muted/30">
             {viewingPreferences.map(({ name, title, description, icon }) => (
-              <label
+              <SettingRow
                 key={name}
-                className="flex cursor-pointer items-start gap-3 p-4 transition-colors hover:bg-muted/70 has-[:disabled]:cursor-wait has-[:disabled]:opacity-60 has-[:focus-visible]:bg-muted/70"
+                title={title}
+                description={description}
+                icon={icon}
+                className="rounded-none border-x-0 border-t-0 bg-transparent last:border-b-0"
               >
-                <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/10 text-primary sm:inline-flex">
-                  <MaterialSymbol icon={icon} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span
-                    id={`preference-${name}-label`}
-                    className="block text-sm leading-5 font-semibold"
-                  >
-                    {title}
-                  </span>
-                  <span
-                    id={`preference-${name}-description`}
-                    className="mt-1 block text-xs leading-5 text-muted-foreground"
-                  >
-                    {description}
-                  </span>
-                </span>
-                <span className="relative mt-0.5 inline-flex shrink-0">
-                  <Controller
+                {({ labelId, descriptionId }) => (
+                  <FormSwitch
                     name={name}
                     control={form.control}
-                    render={({ field }) => (
-                      <input
-                        type="checkbox"
-                        name={field.name}
-                        ref={field.ref}
-                        checked={Boolean(field.value)}
-                        onChange={(event) =>
-                          field.onChange(event.target.checked)
-                        }
-                        onBlur={field.onBlur}
-                        aria-labelledby={`preference-${name}-label`}
-                        aria-describedby={`preference-${name}-description`}
-                        disabled={pending || uploading}
-                        className="peer sr-only"
-                      />
-                    )}
+                    aria-labelledby={labelId}
+                    aria-describedby={descriptionId}
+                    disabled={pending || uploading}
                   />
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex h-6 w-11 items-center rounded-full bg-slate-300 p-0.5 transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-checked:[&>span]:translate-x-5"
-                  >
-                    <span className="h-5 w-5 rounded-full bg-white shadow-sm transition-transform motion-reduce:transition-none" />
-                  </span>
-                </span>
-              </label>
+                )}
+              </SettingRow>
             ))}
           </div>
         </fieldset>

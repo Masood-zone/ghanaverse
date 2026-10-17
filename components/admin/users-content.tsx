@@ -1,4 +1,14 @@
 "use client"
+import {
+  FormSelect,
+  FormSwitch,
+  FormCheckbox,
+} from "@/components/ui/form-controls"
+import { SettingRow } from "@/components/ui/setting-row"
+import { SelectField } from "@/components/ui/select-field"
+import { SelectItem } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useAdminUsers } from "@/services/admin/users"
 import { useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -66,35 +76,42 @@ function UserForm({
     >
       <h2 className="font-bold">Manage {user.name}</h2>
       <div className="flex flex-wrap items-center gap-4">
-        <label className="gv-label">
+        <Label className="gv-label">
           Role
-          <select
-            aria-label="Role"
-            className="gv-field"
-            {...form.register("role")}
-          >
-            <option>VIEWER</option>
-            <option>RIGHTS_HOLDER</option>
-            <option>ADMIN</option>
-          </select>
-        </label>
-        <label className="flex gap-2 text-sm">
-          <input type="checkbox" {...form.register("isSuspended")} />
-          Suspend account
-        </label>
+          <FormSelect aria-label="Role" control={form.control} name="role">
+            <SelectItem value="VIEWER">VIEWER</SelectItem>
+            <SelectItem value="RIGHTS_HOLDER">RIGHTS_HOLDER</SelectItem>
+            <SelectItem value="ADMIN">ADMIN</SelectItem>
+          </FormSelect>
+        </Label>
+        <SettingRow
+          title="Suspend account"
+          description="Block this user's access while the account is suspended."
+          icon="person_off"
+          className="w-full sm:flex-1"
+        >
+          {({ labelId, descriptionId }) => (
+            <FormSwitch
+              control={form.control}
+              name="isSuspended"
+              aria-labelledby={labelId}
+              aria-describedby={descriptionId}
+            />
+          )}
+        </SettingRow>
       </div>
       {selectedRole === "RIGHTS_HOLDER" ? (
         <fieldset className="space-y-2">
           <legend className="gv-label mb-2">Rights-holder organizations</legend>
           {holders.map((holder) => (
-            <label key={holder.id} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+            <Label key={holder.id} className="flex items-center gap-2 text-sm">
+              <FormCheckbox
                 value={holder.id}
-                {...form.register("rightsHolderIds")}
+                control={form.control}
+                name="rightsHolderIds"
               />
               {holder.name}
-            </label>
+            </Label>
           ))}
           <FormError message={form.formState.errors.rightsHolderIds?.message} />
         </fieldset>
@@ -175,9 +192,8 @@ export function UsersContent() {
         </div>
       ) : null}
       <div className="gv-panel mb-5 grid gap-3 sm:grid-cols-3">
-        <input
+        <Input
           aria-label="Search users"
-          className="gv-field"
           placeholder="Search name or email…"
           value={q}
           onChange={(e) => {
@@ -185,33 +201,31 @@ export function UsersContent() {
             setPage(1)
           }}
         />
-        <select
+        <SelectField
           aria-label="Filter role"
-          className="gv-field"
           value={role}
-          onChange={(e) => {
-            setRole(e.target.value)
+          onValueChange={(e) => {
+            setRole(e)
             setPage(1)
           }}
         >
-          <option value="">All roles</option>
-          <option>ADMIN</option>
-          <option>VIEWER</option>
-          <option>RIGHTS_HOLDER</option>
-        </select>
-        <select
+          <SelectItem value="">All roles</SelectItem>
+          <SelectItem value="ADMIN">ADMIN</SelectItem>
+          <SelectItem value="VIEWER">VIEWER</SelectItem>
+          <SelectItem value="RIGHTS_HOLDER">RIGHTS_HOLDER</SelectItem>
+        </SelectField>
+        <SelectField
           aria-label="Account status"
-          className="gv-field"
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value)
+          onValueChange={(e) => {
+            setStatus(e)
             setPage(1)
           }}
         >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-        </select>
+          <SelectItem value="">All statuses</SelectItem>
+          <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="suspended">Suspended</SelectItem>
+        </SelectField>
       </div>
       {editing ? (
         <UserForm

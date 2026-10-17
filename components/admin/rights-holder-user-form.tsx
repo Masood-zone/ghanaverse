@@ -1,4 +1,9 @@
 "use client"
+import { FormSelect } from "@/components/ui/form-controls"
+import { SelectItem } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { useAdminMutation } from "@/services/admin/queries"
@@ -83,30 +88,27 @@ export function RightsHolderUserForm({
       })}
     >
       <h2 className="font-bold sm:col-span-2">Create rights-holder account</h2>
-      <label className="gv-label">
+      <Label className="gv-label">
         Contact name
-        <input
-          className="gv-field"
+        <Input
           required
           maxLength={180}
           autoComplete="name"
           {...form.register("name")}
         />
-      </label>
-      <label className="gv-label">
+      </Label>
+      <Label className="gv-label">
         Login email
-        <input
-          className="gv-field"
+        <Input
           type="email"
           required
           autoComplete="off"
           {...form.register("email")}
         />
-      </label>
-      <label className="gv-label">
+      </Label>
+      <Label className="gv-label">
         Initial password
-        <input
-          className="gv-field"
+        <Input
           type="password"
           required
           minLength={8}
@@ -114,73 +116,58 @@ export function RightsHolderUserForm({
           autoComplete="new-password"
           {...form.register("password")}
         />
-      </label>
-      <label className="gv-label">
+      </Label>
+      <Label className="gv-label">
         Confirm password
-        <input
-          className="gv-field"
+        <Input
           type="password"
           required
           autoComplete="new-password"
           {...form.register("confirmPassword")}
         />
         <FormError message={form.formState.errors.confirmPassword?.message} />
-      </label>
-      <label className="gv-label sm:col-span-2">
+      </Label>
+      <Label className="gv-label sm:col-span-2">
         Rights holder
-        <select className="gv-field" {...form.register("rightsHolderId")}>
-          <option value="">Create a new rights holder</option>
+        <FormSelect
+          aria-label="Rights holder"
+          control={form.control}
+          name="rightsHolderId"
+        >
+          <SelectItem value="">Create a new rights holder</SelectItem>
           {holders.map((holder) => (
-            <option key={holder.id} value={holder.id}>
+            <SelectItem key={holder.id} value={holder.id}>
               {holder.name}
-            </option>
+            </SelectItem>
           ))}
-        </select>
-      </label>
+        </FormSelect>
+      </Label>
       {!selected ? (
         <>
-          <label className="gv-label sm:col-span-2">
+          <Label className="gv-label sm:col-span-2">
             Rights-holder / business name
-            <input
-              className="gv-field"
+            <Input
               required
               maxLength={180}
               {...form.register("businessName")}
             />
-          </label>
-          <label className="gv-label">
+          </Label>
+          <Label className="gv-label">
             Phone (optional)
-            <input
-              className="gv-field"
-              type="tel"
-              maxLength={60}
-              {...form.register("phone")}
-            />
-          </label>
-          <label className="gv-label">
+            <Input type="tel" maxLength={60} {...form.register("phone")} />
+          </Label>
+          <Label className="gv-label">
             Website (optional)
-            <input
-              className="gv-field"
-              type="url"
-              {...form.register("website")}
-            />
-          </label>
-          <label className="gv-label sm:col-span-2">
+            <Input type="url" {...form.register("website")} />
+          </Label>
+          <Label className="gv-label sm:col-span-2">
             Address (optional)
-            <input
-              className="gv-field"
-              maxLength={500}
-              {...form.register("address")}
-            />
-          </label>
-          <label className="gv-label sm:col-span-2">
+            <Input maxLength={500} {...form.register("address")} />
+          </Label>
+          <Label className="gv-label sm:col-span-2">
             Private notes (optional)
-            <textarea
-              className="gv-field"
-              maxLength={2000}
-              {...form.register("notes")}
-            />
-          </label>
+            <Textarea maxLength={2000} {...form.register("notes")} />
+          </Label>
         </>
       ) : null}
       <div className="sm:col-span-2">

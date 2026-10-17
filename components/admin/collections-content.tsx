@@ -1,4 +1,9 @@
 "use client"
+import { FormSwitch } from "@/components/ui/form-controls"
+import { SettingRow } from "@/components/ui/setting-row"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { useAdminContent } from "@/services/admin/content"
 import { useAdminCollections } from "@/services/admin/collections"
 import { useState } from "react"
@@ -66,39 +71,47 @@ function CollectionForm({
         {record ? "Edit" : "Create"} Collection
       </h2>
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="gv-label">
+        <Label className="gv-label">
           Name
-          <input className="gv-field" {...form.register("name")} />
+          <Input {...form.register("name")} />
           <FormError message={form.formState.errors.name?.message} />
-        </label>
-        <label className="gv-label">
+        </Label>
+        <Label className="gv-label">
           Slug
-          <input className="gv-field" {...form.register("slug")} />
+          <Input {...form.register("slug")} />
           <FormError message={form.formState.errors.slug?.message} />
-        </label>
-        <label className="gv-label">
+        </Label>
+        <Label className="gv-label">
           Description
-          <textarea className="gv-field" {...form.register("description")} />
-        </label>
-        <label className="gv-label">
+          <Textarea {...form.register("description")} />
+        </Label>
+        <Label className="gv-label">
           Display position
-          <input
+          <Input
             type="number"
             min="0"
-            className="gv-field"
             {...form.register("sortOrder", { valueAsNumber: true })}
           />
-        </label>
-        <label className="flex gap-2 text-sm">
-          <input type="checkbox" {...form.register("isActive")} />
-          Show this collection publicly
-        </label>
+        </Label>
+        <SettingRow
+          title="Public collection"
+          description="Show this collection to viewers in the catalogue."
+          icon="visibility"
+        >
+          {({ labelId, descriptionId }) => (
+            <FormSwitch
+              control={form.control}
+              name="isActive"
+              aria-labelledby={labelId}
+              aria-describedby={descriptionId}
+            />
+          )}
+        </SettingRow>
       </div>
       <div className="grid gap-5 md:grid-cols-2">
         <section>
           <h3 className="mb-3 font-bold">Find titles</h3>
-          <input
-            className="gv-field"
+          <Input
             aria-label="Search titles for collection"
             placeholder="Search catalogue…"
             value={q}

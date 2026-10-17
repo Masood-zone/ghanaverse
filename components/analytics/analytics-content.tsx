@@ -1,4 +1,7 @@
 "use client"
+import { SelectField } from "@/components/ui/select-field"
+import { SelectItem } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useAnalytics } from "@/services/analytics/queries"
 import { Heading, QueryState, Empty, Pager } from "@/components/admin/shared"
@@ -49,40 +52,40 @@ export function AnalyticsContent({
         }
       />
       <div className="gv-panel mb-6 flex flex-wrap items-end gap-4">
-        <label className="gv-label">
+        <Label className="gv-label">
           Reporting period
-          <select
-            className="gv-field"
+          <SelectField
+            aria-label="Reporting period"
             value={range}
-            onChange={(event) => {
-              setRange(event.target.value)
+            onValueChange={(event) => {
+              setRange(event)
               setPage(1)
             }}
           >
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="all">All time</option>
-          </select>
-        </label>
-        <label className="gv-label min-w-56 flex-1">
+            <SelectItem value="7">Last 7 days</SelectItem>
+            <SelectItem value="30">Last 30 days</SelectItem>
+            <SelectItem value="90">Last 90 days</SelectItem>
+            <SelectItem value="all">All time</SelectItem>
+          </SelectField>
+        </Label>
+        <Label className="gv-label min-w-56 flex-1">
           Title
-          <select
-            className="gv-field"
+          <SelectField
+            aria-label="Title"
             value={contentId}
-            onChange={(event) => {
-              setContentId(event.target.value)
+            onValueChange={(event) => {
+              setContentId(event)
               setPage(1)
             }}
           >
-            <option value="">All available titles</option>
+            <SelectItem value="">All available titles</SelectItem>
             {report?.titles.map((title) => (
-              <option key={title.id} value={title.id}>
+              <SelectItem key={title.id} value={title.id}>
                 {title.title}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-        </label>
+          </SelectField>
+        </Label>
         <button
           className="gv-action secondary"
           disabled={query.isFetching}

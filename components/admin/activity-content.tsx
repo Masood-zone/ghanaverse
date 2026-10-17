@@ -1,4 +1,5 @@
 "use client"
+import { Input } from "@/components/ui/input"
 import { useAdminActivity } from "@/services/admin/activity"
 import { useState } from "react"
 import { Heading, QueryState, Pager, Empty } from "./shared"
@@ -15,9 +16,9 @@ export function ActivityContent() {
         title="Activity History"
         description="Persisted records of successful administrator changes. History is read-only."
       />
-      <input
+      <Input
         aria-label="Search activity"
-        className="gv-field mb-5 max-w-md"
+        className="mb-5 max-w-md"
         placeholder="Search actions or record IDs…"
         value={q}
         onChange={(e) => {

@@ -1,4 +1,6 @@
 "use client"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
@@ -82,51 +84,44 @@ export function AuthForm({
       </p>
       <form className="mt-7 space-y-5" onSubmit={form.handleSubmit(submit)}>
         {mode === "register" ? (
-          <label className="gv-label">
+          <Label className="gv-label">
             Full name
-            <input
-              className="gv-field"
-              autoComplete="name"
-              {...form.register("name")}
-            />
+            <Input autoComplete="name" {...form.register("name")} />
             <FormError message={form.formState.errors.name?.message} />
-          </label>
+          </Label>
         ) : null}
-        <label className="gv-label">
+        <Label className="gv-label">
           Email address
-          <input
+          <Input
             type="email"
-            className="gv-field"
             autoComplete="email"
             {...form.register("email")}
           />
           <FormError message={form.formState.errors.email?.message} />
-        </label>
-        <label className="gv-label">
+        </Label>
+        <Label className="gv-label">
           Password
-          <input
+          <Input
             type="password"
-            className="gv-field"
             autoComplete={
               mode === "sign-in" ? "current-password" : "new-password"
             }
             {...form.register("password")}
           />
           <FormError message={form.formState.errors.password?.message} />
-        </label>
+        </Label>
         {mode === "register" ? (
-          <label className="gv-label">
+          <Label className="gv-label">
             Confirm password
-            <input
+            <Input
               type="password"
-              className="gv-field"
               autoComplete="new-password"
               {...form.register("confirmPassword")}
             />
             <FormError
               message={form.formState.errors.confirmPassword?.message}
             />
-          </label>
+          </Label>
         ) : null}
         <FormError message={error} />
         <button

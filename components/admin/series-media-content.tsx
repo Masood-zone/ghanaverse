@@ -1,4 +1,10 @@
 "use client"
+import { FormSelect, FormSwitch } from "@/components/ui/form-controls"
+import { SettingRow } from "@/components/ui/setting-row"
+import { SelectItem } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { VideoUploadButton } from "@/components/uploads/video-upload-button"
 import { AssetPreview } from "@/components/uploads/asset-preview"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
@@ -75,35 +81,33 @@ function EpisodeForm({
         )
       )}
     >
-      <label className="gv-label">
+      <Label className="gv-label">
         Episode number
-        <input
+        <Input
           type="number"
           min="1"
-          className="gv-field"
           {...form.register("episodeNumber", { valueAsNumber: true })}
         />
-      </label>
-      <label className="gv-label">
+      </Label>
+      <Label className="gv-label">
         Title
-        <input className="gv-field" {...form.register("title")} />
+        <Input {...form.register("title")} />
         <FormError message={form.formState.errors.title?.message} />
-      </label>
-      <label className="gv-label">
+      </Label>
+      <Label className="gv-label">
         Description
-        <textarea className="gv-field" {...form.register("description")} />
-      </label>
-      <label className="gv-label">
+        <Textarea {...form.register("description")} />
+      </Label>
+      <Label className="gv-label">
         Runtime (minutes)
-        <input
-          className="gv-field"
+        <Input
           type="number"
           min="1"
           {...form.register("runtimeMinutes", {
             setValueAs: toOptionalNumber,
           })}
         />
-      </label>
+      </Label>
       <FileUpload
         label="Episode thumbnail"
         purpose="episodeThumbnail"
@@ -173,23 +177,22 @@ function SeasonForm({
         )
       )}
     >
-      <label className="gv-label">
+      <Label className="gv-label">
         Season number
-        <input
+        <Input
           type="number"
           min="1"
-          className="gv-field"
           {...form.register("seasonNumber", { valueAsNumber: true })}
         />
-      </label>
-      <label className="gv-label">
+      </Label>
+      <Label className="gv-label">
         Season title
-        <input className="gv-field" {...form.register("title")} />
-      </label>
-      <label className="gv-label">
+        <Input {...form.register("title")} />
+      </Label>
+      <Label className="gv-label">
         Description
-        <input className="gv-field" {...form.register("description")} />
-      </label>
+        <Input {...form.register("description")} />
+      </Label>
       <FormError message={mutation.error?.message} />
       <div className="flex gap-2">
         <button className="gv-action" disabled={mutation.isPending}>
@@ -272,7 +275,10 @@ export function SeriesMediaContent({
     media.setFocus("playbackUrl")
   }
   return (
-    <fieldset disabled={disabled} className="mt-6 grid gap-6">
+    <fieldset
+      disabled={disabled}
+      className="mt-6 grid min-w-0 grid-cols-1 gap-6"
+    >
       <section className="gv-panel" hidden={section !== "video"}>
         <h2 className="text-xl font-bold text-primary">Trailer</h2>
         <form
@@ -291,14 +297,14 @@ export function SeriesMediaContent({
             )
           )}
         >
-          <label className="gv-label">
+          <Label className="gv-label">
             YouTube ID or URL
-            <input className="gv-field" {...trailer.register("video")} />
-          </label>
-          <label className="gv-label">
+            <Input {...trailer.register("video")} />
+          </Label>
+          <Label className="gv-label">
             Trailer title
-            <input className="gv-field" {...trailer.register("title")} />
-          </label>
+            <Input {...trailer.register("title")} />
+          </Label>
           <button className="gv-action self-end" disabled={mutation.isPending}>
             Save trailer
           </button>
@@ -602,29 +608,29 @@ export function SeriesMediaContent({
             )
           )}
         >
-          <label className="gv-label md:col-span-2">
+          <Label className="gv-label md:col-span-2">
             YouTube or direct-video URL
-            <input className="gv-field" {...media.register("playbackUrl")} />
+            <Input {...media.register("playbackUrl")} />
             <FormError message={media.formState.errors.playbackUrl?.message} />
-          </label>
-          <label className="gv-label">
+          </Label>
+          <Label className="gv-label">
             Source type
-            <select
+            <FormSelect
               aria-label="Source type"
-              className="gv-field"
-              {...media.register("sourceType")}
+              control={media.control}
+              name="sourceType"
             >
-              <option>REMOTE_URL</option>
-              <option>YOUTUBE</option>
-              <option>DEMO</option>
-            </select>
-          </label>
-          <label className="gv-label">
+              <SelectItem value="REMOTE_URL">Direct video URL</SelectItem>
+              <SelectItem value="YOUTUBE">YouTube</SelectItem>
+              <SelectItem value="DEMO">Demo</SelectItem>
+            </FormSelect>
+          </Label>
+          <Label className="gv-label">
             Rights
-            <select
+            <FormSelect
               aria-label="Rights"
-              className="gv-field"
-              {...media.register("licenseType")}
+              control={media.control}
+              name="licenseType"
             >
               {[
                 "UNKNOWN",
@@ -634,45 +640,57 @@ export function SeriesMediaContent({
                 "PUBLIC_DOMAIN",
                 "DEMO",
               ].map((value) => (
-                <option key={value}>{value}</option>
+                <SelectItem key={value} value={value}>
+                  {value}
+                </SelectItem>
               ))}
-            </select>
-          </label>
+            </FormSelect>
+          </Label>
           {record.contentType === "SERIES" ? (
-            <label className="gv-label">
+            <Label className="gv-label">
               Episode
-              <select
+              <FormSelect
                 aria-label="Episode"
-                className="gv-field"
-                {...media.register("episodeId")}
+                control={media.control}
+                name="episodeId"
               >
-                <option value="">Choose an episode</option>
+                <SelectItem value="">Choose an episode</SelectItem>
                 {record.seasons.flatMap((s) =>
                   s.episodes.map((e) => (
-                    <option key={e.id} value={e.id}>
+                    <SelectItem key={e.id} value={e.id}>
                       S{s.seasonNumber} E{e.episodeNumber}: {e.title}
-                    </option>
+                    </SelectItem>
                   ))
                 )}
-              </select>
-            </label>
+              </FormSelect>
+            </Label>
           ) : null}
-          <label className="gv-label">
+          <Label className="gv-label">
             Duration in minutes
-            <input
+            <Input
               type="number"
               min="0.016666667"
               step="any"
-              className="gv-field"
               {...media.register("durationSeconds", {
                 setValueAs: minutesToSeconds,
               })}
             />
-          </label>
-          <label className="flex items-center gap-2 text-xs">
-            <input type="checkbox" {...media.register("isPlayable")} />
-            Enable playback for this asset
-          </label>
+          </Label>
+          <SettingRow
+            title="Enable playback"
+            description="Allow viewers to play this asset when its rights and publication requirements are met."
+            icon="play_circle"
+            className="md:col-span-2"
+          >
+            {({ labelId, descriptionId }) => (
+              <FormSwitch
+                control={media.control}
+                name="isPlayable"
+                aria-labelledby={labelId}
+                aria-describedby={descriptionId}
+              />
+            )}
+          </SettingRow>
           <button className="gv-action" disabled={mutation.isPending}>
             Add playback asset
           </button>

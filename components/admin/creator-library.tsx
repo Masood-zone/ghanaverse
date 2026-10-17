@@ -1,4 +1,6 @@
 "use client"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useState } from "react"
 import { useAdminContent } from "@/services/admin/content"
@@ -24,17 +26,16 @@ function Library() {
           Add content
         </Link>
       </div>
-      <label className="gv-label mb-5 max-w-md">
+      <Label className="gv-label mb-5 max-w-md">
         Search your titles
-        <input
-          className="gv-field"
+        <Input
           value={q}
           onChange={(e) => {
             setQ(e.target.value)
             setPage(1)
           }}
         />
-      </label>
+      </Label>
       <QueryState
         pending={query.isPending}
         error={query.error}

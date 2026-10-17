@@ -1,4 +1,5 @@
 "use client"
+import { Input } from "@/components/ui/input"
 import { useDropzone } from "react-dropzone"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
 import { MaterialSymbol } from "./MaterialSymbol"
@@ -54,7 +55,7 @@ export default function FileUpload({
         className={`cursor-pointer rounded-lg border border-dashed bg-white p-5 text-center ${isDragActive ? "border-primary bg-orange-50" : "border-slate-300"}`}
         aria-label={`Upload ${label}`}
       >
-        <input {...getInputProps()} />
+        <Input {...getInputProps()} />
         <MaterialSymbol
           icon={mutation.isPending ? "progress_activity" : "cloud_upload"}
           className={

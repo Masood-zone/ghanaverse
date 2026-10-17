@@ -1,4 +1,7 @@
 "use client"
+import { SelectField } from "@/components/ui/select-field"
+import { SelectItem } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { useAdminDashboard } from "@/services/admin/dashboard"
 import { useAdminOptions } from "@/services/admin/metadata"
 import { useAdminContent } from "@/services/admin/content"
@@ -66,26 +69,24 @@ export function ContentLibraryContent() {
         </div>
       ) : null}
       <div className="gv-panel mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <input
+        <Input
           aria-label="Search titles"
           placeholder="Search titles…"
-          className="gv-field"
           value={q}
           onChange={(e) => {
             setQ(e.target.value)
             setPage(1)
           }}
         />
-        <select
+        <SelectField
           aria-label="Content type"
-          className="gv-field"
           value={type}
-          onChange={(e) => {
-            setType(e.target.value)
+          onValueChange={(e) => {
+            setType(e)
             setPage(1)
           }}
         >
-          <option value="">All types</option>
+          <SelectItem value="">All types</SelectItem>
           {[
             "MOVIE",
             "SERIES",
@@ -93,39 +94,41 @@ export function ContentLibraryContent() {
             "CULTURAL_PROGRAMME",
             "LIFESTYLE_PROGRAMME",
           ].map((t) => (
-            <option key={t}>{t}</option>
+            <SelectItem key={t} value={t}>
+              {t}
+            </SelectItem>
           ))}
-        </select>
-        <select
+        </SelectField>
+        <SelectField
           aria-label="Publication status"
-          className="gv-field"
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value)
+          onValueChange={(e) => {
+            setStatus(e)
             setPage(1)
           }}
         >
-          <option value="">All statuses</option>
+          <SelectItem value="">All statuses</SelectItem>
           {["DRAFT", "PUBLISHED", "UNPUBLISHED"].map((t) => (
-            <option key={t}>{t}</option>
+            <SelectItem key={t} value={t}>
+              {t}
+            </SelectItem>
           ))}
-        </select>
-        <select
+        </SelectField>
+        <SelectField
           aria-label="Genre"
-          className="gv-field"
           value={genre}
-          onChange={(e) => {
-            setGenre(e.target.value)
+          onValueChange={(e) => {
+            setGenre(e)
             setPage(1)
           }}
         >
-          <option value="">All genres</option>
+          <SelectItem value="">All genres</SelectItem>
           {options.data?.genres.map((g) => (
-            <option key={g.id} value={g.id}>
+            <SelectItem key={g.id} value={g.id}>
               {g.name}
-            </option>
+            </SelectItem>
           ))}
-        </select>
+        </SelectField>
       </div>
       <QueryState
         pending={query.isPending}

@@ -1,4 +1,7 @@
 "use client"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { useAdminOptions } from "@/services/admin/metadata"
 import { useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -103,69 +106,52 @@ function RegistryForm({
         {record ? "Edit" : "Add"} {kinds.find((k) => k[0] === kind)?.[1]} Record
       </h2>
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="gv-label">
+        <Label className="gv-label">
           Name
-          <input className="gv-field" {...form.register("name")} />
+          <Input {...form.register("name")} />
           <FormError message={form.formState.errors.name?.message} />
-        </label>
+        </Label>
         {["genres", "classifications"].includes(kind) ? (
-          <label className="gv-label">
+          <Label className="gv-label">
             URL slug
-            <input
-              className="gv-field"
+            <Input
               placeholder="Generated from name if blank"
               {...form.register("slug")}
             />
-          </label>
+          </Label>
         ) : null}
         {kind === "languages" ? (
-          <label className="gv-label">
+          <Label className="gv-label">
             Language code
-            <input required className="gv-field" {...form.register("code")} />
-          </label>
+            <Input required {...form.register("code")} />
+          </Label>
         ) : null}
         {kind === "rightsHolders" ? (
           <>
-            <label className="gv-label">
+            <Label className="gv-label">
               Contact email
-              <input
-                type="email"
-                className="gv-field"
-                {...form.register("contactEmail")}
-              />
+              <Input type="email" {...form.register("contactEmail")} />
               <FormError
                 message={form.formState.errors.contactEmail?.message}
               />
-            </label>
-            <label className="gv-label md:col-span-2">
+            </Label>
+            <Label className="gv-label md:col-span-2">
               Administrative notes
-              <textarea
-                className="gv-field"
-                rows={3}
-                {...form.register("notes")}
-              />
-            </label>
-            <label className="gv-label">
+              <Textarea rows={3} {...form.register("notes")} />
+            </Label>
+            <Label className="gv-label">
               Phone
-              <input
-                className="gv-field"
-                type="tel"
-                {...form.register("phone")}
-              />
-            </label>
-            <label className="gv-label">
+              <Input type="tel" {...form.register("phone")} />
+            </Label>
+            <Label className="gv-label">
               Website
-              <input
-                className="gv-field"
-                type="url"
-                {...form.register("website")}
-              />
+              <Input type="url" {...form.register("website")} />
               <FormError message={form.formState.errors.website?.message} />
-            </label>
-            <label className="gv-label md:col-span-2">
+            </Label>
+            <Label className="gv-label md:col-span-2">
               Address
-              <input className="gv-field" {...form.register("address")} />
-            </label>
+              <Input {...form.register("address")} />
+            </Label>
           </>
         ) : null}
         {kind === "people" ? (
@@ -275,8 +261,8 @@ export function RegistryContent({ creators = false }: { creators?: boolean }) {
           close={() => setEditing(undefined)}
         />
       ) : null}
-      <input
-        className="gv-field my-5 max-w-lg"
+      <Input
+        className="my-5 max-w-lg"
         aria-label="Search records"
         placeholder="Search records by name…"
         value={q}

@@ -98,7 +98,10 @@ async function main() {
     })
     users.push(owner.id)
     holderId = owner.rightsHolderMemberships[0].rightsHolderId
-    await page.getByLabel("Filter role").selectOption("RIGHTS_HOLDER")
+    await page.getByRole("combobox", { name: "Filter role" }).click()
+    await page
+      .getByRole("option", { name: "RIGHTS_HOLDER", exact: true })
+      .click()
     await expect(
       page.getByRole("cell", { name: ownerEmail, exact: true })
     ).toBeVisible()
@@ -124,16 +127,17 @@ async function main() {
     await page.goto(`${base}/admin/content/${title.id}`)
     await page.getByRole("tab", { name: "Rights", exact: true }).click()
     await expect(
-      page
-        .getByLabel("Rights holder", { exact: true })
-        .locator("option:checked")
+      page.getByRole("combobox", { name: "Rights holder", exact: true })
     ).toContainText("QA Owner Contact")
     await page
       .getByLabel("YouTube or direct-video URL")
       .fill("https://www.youtube.com/watch?v=M7lc1UVf-VE")
-    await page.locator('select[name="licenseType"]').selectOption("LICENSED")
+    await page.getByRole("combobox", { name: "Rights", exact: true }).click()
+    await page.getByRole("option", { name: "LICENSED", exact: true }).click()
     await page.getByLabel("Duration in minutes").fill("37.5")
-    await page.getByLabel("Enable playback for this asset").check()
+    await page
+      .getByRole("switch", { name: "Enable playback", exact: true })
+      .check()
     const media = page.waitForResponse(
       (response) =>
         response.url().endsWith(`/content/${title.id}/video-assets`) &&
@@ -353,7 +357,7 @@ async function main() {
         response.request().method() === "PUT"
     )
     await ownerPage
-            .getByRole("button", { name: /^Play(?:\s|\(|$)/i })
+      .getByRole("button", { name: /^Play(?:\s|\(|$)/i })
       .first()
       .click()
     expect((await nativeStart).status()).toBe(200)

@@ -111,13 +111,17 @@ async function main() {
       )
     await page.getByRole("tab", { name: "Classification & Meta" }).click()
     await page
-      .getByLabel("Audience classification", { exact: true })
-      .selectOption({ label: "PG" })
+      .getByRole("combobox", { name: "Audience classification", exact: true })
+      .click()
+    await page.getByRole("option", { name: "PG", exact: true }).click()
     await page.getByLabel("Drama", { exact: true }).check()
     await page.getByLabel("English", { exact: true }).check()
     await page.getByRole("tab", { name: "People & Production" }).click()
     await page.getByRole("button", { name: "Add Contributor" }).click()
-    await page.getByLabel("Person", { exact: true }).selectOption(ids.creator!)
+    await page.getByRole("combobox", { name: "Person", exact: true }).click()
+    await page
+      .getByRole("option", { name: `${title} Creator`, exact: true })
+      .click()
     await page.getByRole("tab", { name: "General", exact: true }).click()
     await expect(page.getByLabel("Content title", { exact: true })).toHaveValue(
       title
