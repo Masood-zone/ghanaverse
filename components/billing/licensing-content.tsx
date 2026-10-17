@@ -527,12 +527,12 @@ export function LicensingContent({ admin = false }: { admin?: boolean }) {
           Export statement (.CSV)
         </a>
       </div>
-      {data.mode === "test" ? (
+      {/* {data.mode === "test" ? (
         <div className="gv-sub-status">
           Paystack test environment. Provider test success does not establish a
           real bank or Mobile Money settlement.
         </div>
-      ) : null}
+      ) : null} */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="gv-sub-card">
           <p>Approved fees awaiting settlement</p>
