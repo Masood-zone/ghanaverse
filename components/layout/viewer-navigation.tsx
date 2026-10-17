@@ -191,7 +191,7 @@ export function ViewerNavigation() {
         )}
       </div>
       {activeProfile || premium ? (
-        <div className="ml-auto min-w-0 max-w-28 md:hidden">
+        <div className="ml-auto max-w-28 min-w-0 md:hidden">
           {activeProfile ? (
             <p className="truncate text-xs font-semibold text-primary">
               {activeProfile.name}
@@ -265,8 +265,17 @@ function UserIdentity({
         compact ? "hidden w-52 text-right xl:block" : "mb-1 border-b px-3 py-2"
       )}
     >
-      <p className="truncate text-sm font-bold text-foreground">{user.name}</p>
-      {premium ? <PremiumBadge className="mt-1" /> : null}
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-2",
+          compact && "justify-end"
+        )}
+      >
+        <p className="truncate text-sm font-bold text-foreground">
+          {user.name}
+        </p>
+        {premium ? <PremiumBadge /> : null}
+      </div>
       <p className="truncate text-xs text-muted-foreground">{user.email}</p>
       {profileName ? (
         <p className="truncate text-[10px] font-semibold text-primary">
