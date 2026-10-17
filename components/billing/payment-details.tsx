@@ -138,7 +138,7 @@ function PaymentForm({
             <span className="gv-sub-badge muted">
               <MaterialSymbol icon="verified_user" />
               {data.configuration.mode === "test"
-                ? "PAYSTACK TEST MODE"
+                ? "SECURE PAYSTACK CHECKOUT"
                 : "SECURE PAYSTACK CHECKOUT"}
             </span>
             <h1 className="mt-4 text-3xl font-bold">Payment details</h1>

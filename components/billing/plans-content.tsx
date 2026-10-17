@@ -63,7 +63,7 @@ export function PlansContent() {
       <div className="gv-subscription-intro">
         <span className="gv-sub-badge">
           ● GHANAVERSE MEMBERSHIP{" "}
-          {mode === "test" ? "· PAYSTACK TEST MODE" : ""}
+          {mode === "test" ? "· SECURE PAYSTACK CHECKOUT" : ""}
         </span>
         <h1>
           Choose the plan that fits your
