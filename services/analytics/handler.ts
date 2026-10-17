@@ -6,7 +6,7 @@ export async function handleAnalytics(request: Request, admin: boolean) {
   try {
     const { user } = await (admin ? requireAdmin() : requireUser())
     const query = Object.fromEntries(new URL(request.url).searchParams)
-    const report = await getAnalytics(user.id, query)
+    const report = await getAnalytics(user.id, query, new Date(), admin)
     if (query.format === "csv")
       return new Response("\uFEFF" + analyticsCsv(report), {
         headers: {

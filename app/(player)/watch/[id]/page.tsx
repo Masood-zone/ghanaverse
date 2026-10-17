@@ -18,6 +18,7 @@ import { getPrisma } from "@/lib/prisma"
 import { getActiveProfile } from "@/lib/profiles"
 import { callbackWithSearch } from "@/lib/auth/callback"
 import { premiumAccess, activeLicense } from "@/services/billing/access"
+import { PremiumContentGate } from "@/components/billing/premium-content-gate"
 
 export default async function WatchPage({
   params,
@@ -88,18 +89,14 @@ export default async function WatchPage({
         </div>
       </div>
       <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-8">
-        {premium ? (
-          <PlayerState
-            icon={<LockKeyhole />}
-            title="Unlock this title with Premium Pass"
-            body="An active Premium Pass unlocks available exclusive titles. Visit Plans to purchase or renew access."
-          />
-        ) : licenseMissing ? (
+        {licenseMissing ? (
           <PlayerState
             icon={<LockKeyhole />}
             title="Title currently unavailable"
             body="This title does not currently have an active streaming licence."
           />
+        ) : premium ? (
+          <PremiumContentGate title={title} posterUrl={content.posterUrl} />
         ) : !permitted ? (
           <PlayerState
             icon={<AlertTriangle />}
@@ -139,11 +136,6 @@ export default async function WatchPage({
           />
         )}
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
-          {premium ? (
-            <Link href="/plans" className="gv-action">
-              View Premium Pass · Renew access
-            </Link>
-          ) : null}
           <section className="rounded-xl border bg-white p-5 md:p-7">
             <div className="flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
               <span>{content.classification}</span>

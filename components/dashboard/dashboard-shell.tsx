@@ -13,6 +13,7 @@ const navigation = [
   ["Metadata & Rights", "/admin/metadata", "category"],
   ["Collections", "/admin/collections", "collections_bookmark"],
   ["Users", "/admin/users", "group"],
+  ["Premium Users", "/admin/premium-users", "workspace_premium"],
   ["Activity", "/admin/activity", "history"],
   ["Analytics", "/admin/analytics", "analytics"],
   ["Licensing & Payouts", "/admin/royalties", "payments"],
@@ -32,7 +33,7 @@ export function DashboardShell({
       <aside
         className={`${open ? "flex" : "hidden"} fixed inset-y-0 left-0 z-50 w-[260px] flex-col border-r bg-white px-4 py-6 shadow-sm md:flex`}
       >
-        <div className="mb-8 flex items-center justify-between px-2">
+        <div className="mb-6 flex shrink-0 items-center justify-between px-2">
           <Brand admin />
           <button
             aria-label="Close navigation"
@@ -42,7 +43,10 @@ export function DashboardShell({
             <MaterialSymbol icon="close" />
           </button>
         </div>
-        <nav aria-label="Administration" className="grid gap-1">
+        <nav
+          aria-label="Administration"
+          className="grid min-h-0 flex-1 content-start gap-1 overflow-y-auto overscroll-contain pr-1"
+        >
           {navigation.map(([label, href, icon]) => (
             <Link
               key={href}
@@ -60,7 +64,7 @@ export function DashboardShell({
             </Link>
           ))}
         </nav>
-        <div className="mt-auto border-t pt-4">
+        <div className="mt-4 shrink-0 border-t pt-4">
           <Link
             href="/"
             className="flex items-center justify-between px-3 py-3 text-sm"

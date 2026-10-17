@@ -3,11 +3,13 @@ import { Prisma } from "@/app/generated/prisma/client"
 import { getPrisma, sqlTable } from "@/lib/prisma"
 import { PlatformError } from "@/lib/route-error"
 import { z } from "zod"
+import { paymentReport } from "./payment-report"
 
 export const analyticsQuerySchema = z.object({
   range: z.enum(["7", "30", "90", "all"]).default("30"),
   contentId: z.string().min(1).optional(),
   format: z.enum(["json", "csv"]).default("json"),
+  paymentPage: z.coerce.number().int().min(1).max(100000).default(1),
 })
 export async function analyticsScope(userId: string) {
   const user = await getPrisma().user.findUnique({
@@ -66,7 +68,8 @@ function displayRow(row: Row) {
 export async function getAnalytics(
   userId: string,
   raw: unknown,
-  now = new Date()
+  now = new Date(),
+  includePayments = false
 ) {
   const query = analyticsQuerySchema.parse(raw),
     scope = await analyticsScope(userId),
@@ -99,7 +102,7 @@ export async function getAnalytics(
     COALESCE(SUM(p."watchedMilliseconds") FILTER (WHERE p."createdAt" >= ${since} AND p."createdAt" < ${end}), 0)::bigint AS "watchMs",
     COUNT(DISTINCT s.id) FILTER (WHERE (s."startedAt" >= ${since} AND s."startedAt" < ${end}) OR (p."createdAt" >= ${since} AND p."createdAt" < ${end})) AS "activeSessions",
     COUNT(DISTINCT s.id) FILTER (WHERE s."completedAt" >= ${since} AND s."completedAt" < ${end}) AS completions`
-  const [rows, totals, episodes, daily] = await Promise.all([
+  const [rows, totals, episodes, daily, payments] = await Promise.all([
     db.$queryRaw<Row[]>(
       Prisma.sql`SELECT c.id, c.title, c."contentType"::text, ${selectMetrics} FROM ${sqlTable("Content")} c LEFT JOIN ${sqlTable("PlaybackSession")} s ON s."contentId" = c.id LEFT JOIN ${sqlTable("PlaybackSample")} p ON p."sessionId" = s.id WHERE ${filter} GROUP BY c.id ORDER BY "watchMs" DESC, streams DESC, c.title`
     ),
@@ -115,10 +118,14 @@ export async function getAnalytics(
       SELECT TO_CHAR(s."startedAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, COUNT(*) AS streams, 0::bigint AS ms FROM ${sqlTable("PlaybackSession")} s JOIN ${sqlTable("Content")} c ON c.id = s."contentId" WHERE ${filter} AND s."startedAt" >= ${since} AND s."startedAt" < ${end} GROUP BY day
       UNION ALL SELECT TO_CHAR(p."createdAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, 0::bigint, SUM(p."watchedMilliseconds") FROM ${sqlTable("PlaybackSample")} p JOIN ${sqlTable("PlaybackSession")} s ON s.id = p."sessionId" JOIN ${sqlTable("Content")} c ON c.id = s."contentId" WHERE ${filter} AND p."createdAt" >= ${since} AND p."createdAt" < ${end} GROUP BY day
     ) events GROUP BY day ORDER BY day`),
+    scope.admin && includePayments && query.format !== "csv"
+      ? paymentReport(since, end, query.paymentPage)
+      : undefined,
   ])
   return {
     range: query.range,
     timezone: "UTC",
+    ...(payments ? { payments } : {}),
     titles,
     summary: displayRow(totals[0]),
     rows: rows.map(displayRow),

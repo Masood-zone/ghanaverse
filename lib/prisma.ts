@@ -10,6 +10,8 @@ export function sqlTable(
     | "PlaybackSample"
     | "ViewerProfile"
     | "User"
+    | "PremiumGrant"
+    | "BillingPayment"
 ) {
   const schema =
     new URL(process.env.DATABASE_URL!).searchParams.get("schema") ?? "public"

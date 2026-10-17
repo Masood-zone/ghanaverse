@@ -10,6 +10,7 @@ import Link from "@/components/common/app-link"
 import { ArrowLeft, ArrowRight, Pause, Play, Info } from "lucide-react"
 import { ContentArtwork } from "./content-artwork"
 import { TrailerDialog } from "./trailer-dialog"
+import { PremiumBadge } from "@/components/billing/premium-badge"
 export type FeaturedSlide = {
   id: string
   slug: string
@@ -23,6 +24,7 @@ export type FeaturedSlide = {
   assetId: string | null
   trailerId: string | null
   isFeatured: boolean
+  isPremium: boolean
 }
 function subscribeEnvironment(notify: () => void) {
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -140,6 +142,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
         key={item.id}
       >
         <div className="max-w-2xl">
+          {item.isPremium ? <PremiumBadge className="mr-2 mb-2" /> : null}
           <span className="rounded-full bg-amber-500 px-3 py-1 text-[10px] font-extrabold tracking-widest text-black uppercase">
             {item.isFeatured
               ? "Featured GhanaVerse selection"

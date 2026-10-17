@@ -122,6 +122,7 @@ export function LibraryContent({
                 return content ? (
                   <LandscapeCard
                     key={item.id}
+                    isPremium={content.isPremium}
                     title={
                       item.episode
                         ? `${content.title}: ${item.episode.title}`

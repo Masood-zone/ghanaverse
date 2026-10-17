@@ -6,6 +6,7 @@ import { useState } from "react"
 import { useAnalytics } from "@/services/analytics/queries"
 import { Heading, QueryState, Empty, Pager } from "@/components/admin/shared"
 import type { AnalyticsReport } from "@/types/analytics"
+import { PaymentAnalytics } from "./payment-analytics"
 const hours = (seconds: number) =>
   seconds > 0 && seconds < 36
     ? "<0.01"
@@ -18,8 +19,10 @@ export function AnalyticsContent({
   const [range, setRange] = useState("30"),
     [contentId, setContentId] = useState(""),
     [page, setPage] = useState(1)
+  const [paymentPage, setPaymentPage] = useState(1)
   const params = new URLSearchParams({
     range,
+    ...(audience === "admin" ? { paymentPage: String(paymentPage) } : {}),
     ...(contentId ? { contentId } : {}),
   }).toString()
   const query = useAnalytics(audience, params),
@@ -31,13 +34,17 @@ export function AnalyticsContent({
   return (
     <section className={audience === "creator" ? "gv-container py-10" : ""}>
       <Heading
-        eyebrow="GhanaVerse viewing analytics"
+        eyebrow={
+          audience === "admin"
+            ? "GhanaVerse platform analytics"
+            : "GhanaVerse viewing analytics"
+        }
         title={
           audience === "admin" ? "Platform Analytics" : "Rights-holder reports"
         }
         description={
           audience === "admin"
-            ? "Understand viewing activity across the catalogue."
+            ? "Track Premium Pass payments and viewing activity across the catalogue."
             : "Viewing activity for titles assigned to your rights-holder organizations."
         }
         actions={
@@ -46,7 +53,7 @@ export function AnalyticsContent({
               className="gv-action"
               href={`/api/${audience}/analytics?${params}&format=csv`}
             >
-              Export CSV report
+              Export viewing CSV
             </a>
           ) : undefined
         }
@@ -60,6 +67,7 @@ export function AnalyticsContent({
             onValueChange={(event) => {
               setRange(event)
               setPage(1)
+              setPaymentPage(1)
             }}
           >
             <SelectItem value="7">Last 7 days</SelectItem>
@@ -107,6 +115,9 @@ export function AnalyticsContent({
       />
       {report ? (
         <>
+          {audience === "admin" && report.payments ? (
+            <PaymentAnalytics data={report.payments} onPage={setPaymentPage} />
+          ) : null}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <Stat
               label="Streams"

@@ -5,33 +5,40 @@ import { getProfilesData } from "@/services/viewer/operations"
 import { getPrisma } from "@/lib/prisma"
 import { z } from "zod"
 import { ownedPhoto, verifyOrigin } from "@/lib/viewer-photos"
+import { premiumAccess } from "@/services/billing/access"
 export async function GET() {
   try {
     const { user } = await requireUser()
-    const contact = await getPrisma().user.findUniqueOrThrow({
-      where: { id: user.id },
-      select: {
-        phone: true,
-        phoneVerifiedAt: true,
-        transactionalSmsConsent: true,
-      },
-    })
-    return apiSuccess({
+    const [contact, profiles, premium, memberships] = await Promise.all([
+      getPrisma().user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: {
+          phone: true,
+          phoneVerifiedAt: true,
+          transactionalSmsConsent: true,
+        },
+      }),
+      getProfilesData(user.id),
+      premiumAccess(user.id),
+      user.role === "RIGHTS_HOLDER"
+        ? getPrisma().rightsHolderMembership.count({
+            where: { userId: user.id },
+          })
+        : 0,
+    ])
+    const response = apiSuccess({
       id: user.id,
       name: user.name,
       email: user.email,
       image: user.image,
       role: user.role,
       ...contact,
-      hasRightsHolderReports:
-        user.role === "RIGHTS_HOLDER" &&
-        Boolean(
-          await getPrisma().rightsHolderMembership.count({
-            where: { userId: user.id },
-          })
-        ),
-      ...(await getProfilesData(user.id)),
+      premium,
+      hasRightsHolderReports: memberships > 0,
+      ...profiles,
     })
+    response.headers.set("Cache-Control", "private, no-store")
+    return response
   } catch (error) {
     return routeError(error)
   }

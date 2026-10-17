@@ -142,6 +142,7 @@ async function HomeHero({
       releaseYear: item.releaseYear,
       contentType: item.contentType,
       isFeatured: item.isFeatured,
+      isPremium: item.isPremium,
       assetId:
         allowedAsset(
           media.find((current) => current.id === item.id)!,
@@ -203,6 +204,7 @@ async function PersonalSections({
                       : title.title
                   }
                   subtitle={`${Math.round(percent)}% watched`}
+                  isPremium={title.isPremium}
                   image={item.episode?.thumbnailUrl ?? title.backdropUrl}
                   progress={percent}
                   href={asset ? `/watch/${asset.id}` : `/title/${title.slug}`}

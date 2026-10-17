@@ -20,6 +20,8 @@ import { episodeLabel, selectPlaybackAsset } from "@/lib/series"
 import { RestrictedContent } from "@/components/profiles/restricted-content"
 import { callbackWithSearch } from "@/lib/auth/callback"
 import { premiumAccess, activeLicense } from "@/services/billing/access"
+import { PremiumContentGate } from "@/components/billing/premium-content-gate"
+import { PremiumBadge } from "@/components/billing/premium-badge"
 
 type WatchLink = {
   url?: string
@@ -72,10 +74,13 @@ export default async function TitlePage({
   const links = (
     Array.isArray(content.externalWatchLinks) ? content.externalWatchLinks : []
   ) as WatchLink[]
-  const canPlayPremium =
-    !content.isPremium ||
-    ((await premiumAccess(access?.user.id)).active &&
-      Boolean(await activeLicense(content.id, content.rightsHolderId)))
+  const [pass, license] = content.isPremium
+    ? await Promise.all([
+        premiumAccess(access?.user.id),
+        activeLicense(content.id, content.rightsHolderId),
+      ])
+    : [null, null]
+  const canPlayPremium = !content.isPremium || Boolean(pass?.active && license)
   const mainAsset = canPlayPremium
     ? selectPlaybackAsset(
         content.videoAssets.filter(
@@ -193,15 +198,29 @@ export default async function TitlePage({
               />
             </div>
             {content.isPremium ? (
-              <p className="mt-4 text-sm font-semibold text-amber-200">
-                {canPlayPremium ? (
-                  "Included in your Premium Pass."
+              <div className="mt-6">
+                {!license ? (
+                  <div className="rounded-xl border border-amber-300/40 bg-slate-900 p-5">
+                    <PremiumBadge />
+                    <p className="mt-3 font-bold">
+                      {content.title} is currently unavailable
+                    </p>
+                    <p className="mt-2 text-sm text-slate-300">
+                      This Premium title does not currently have an active
+                      streaming licence.
+                    </p>
+                  </div>
+                ) : canPlayPremium ? (
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-amber-200">
+                    <PremiumBadge /> Included in your Premium Pass.
+                  </p>
                 ) : (
-                  <Link href="/plans" className="underline">
-                    Premium Pass required · View plans or renew access →
-                  </Link>
+                  <PremiumContentGate
+                    title={content.title}
+                    posterUrl={content.posterUrl}
+                  />
                 )}
-              </p>
+              </div>
             ) : null}
           </div>
         </div>

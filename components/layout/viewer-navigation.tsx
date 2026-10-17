@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { PersonAvatar } from "@/components/catalogue/content-artwork"
 import { useAccount } from "@/services/viewer/account"
 import { useSyncExternalStore } from "react"
+import { PremiumBadge } from "@/components/billing/premium-badge"
 
 const subscribeHydration = () => () => {}
 const clientHydrated = () => true
@@ -40,6 +41,7 @@ export function ViewerNavigation() {
   const links = session ? [...publicLinks, ...memberLinks] : publicLinks
   const user = session?.user
   const account = useAccount(Boolean(session))
+  const premium = Boolean(session && account.data?.premium?.active)
   const linkClass = (href: string) =>
     cn(
       "rounded-md px-3 py-2 text-sm font-medium transition",
@@ -133,6 +135,7 @@ export function ViewerNavigation() {
           <div className="flex items-center gap-3">
             {user ? (
               <UserIdentity
+                premium={premium}
                 user={{
                   name: account.data?.name ?? user.name,
                   email: user.email,
@@ -145,6 +148,7 @@ export function ViewerNavigation() {
                 }
               />
             ) : null}
+            {premium ? <PremiumBadge className="xl:hidden" /> : null}
             <details className="relative">
               <summary
                 aria-label="Account menu"
@@ -161,6 +165,7 @@ export function ViewerNavigation() {
               <div className="absolute top-12 right-0 z-50 grid w-56 gap-1 rounded-lg border bg-card p-2 shadow-xl">
                 {user ? (
                   <UserIdentity
+                    premium={premium}
                     user={{
                       name: account.data?.name ?? user.name,
                       email: user.email,
@@ -185,11 +190,16 @@ export function ViewerNavigation() {
           </>
         )}
       </div>
-      {activeProfile ? (
-        <span className="ml-auto max-w-28 truncate text-xs font-semibold text-primary md:hidden">
-          {activeProfile.name}
-          {activeProfile.isKids ? " · Kids" : ""}
-        </span>
+      {activeProfile || premium ? (
+        <div className="ml-auto min-w-0 max-w-28 md:hidden">
+          {activeProfile ? (
+            <p className="truncate text-xs font-semibold text-primary">
+              {activeProfile.name}
+              {activeProfile.isKids ? " · Kids" : ""}
+            </p>
+          ) : null}
+          {premium ? <PremiumBadge className="mt-1" /> : null}
+        </div>
       ) : null}
       <details className="relative ml-auto lg:hidden">
         <summary
@@ -201,6 +211,7 @@ export function ViewerNavigation() {
         <div className="absolute top-12 right-0 z-50 grid w-64 gap-1 rounded-lg border bg-card p-2 shadow-xl">
           {user ? (
             <UserIdentity
+              premium={premium}
               user={{
                 name: account.data?.name ?? user.name,
                 email: user.email,
@@ -240,10 +251,12 @@ function UserIdentity({
   user,
   compact = false,
   profileName,
+  premium,
 }: {
   user: { name: string; email: string }
   compact?: boolean
   profileName?: string
+  premium: boolean
 }) {
   return (
     <div
@@ -253,6 +266,7 @@ function UserIdentity({
       )}
     >
       <p className="truncate text-sm font-bold text-foreground">{user.name}</p>
+      {premium ? <PremiumBadge className="mt-1" /> : null}
       <p className="truncate text-xs text-muted-foreground">{user.email}</p>
       {profileName ? (
         <p className="truncate text-[10px] font-semibold text-primary">

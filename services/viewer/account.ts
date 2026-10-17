@@ -10,5 +10,11 @@ export function useAccount(enabled = true) {
     queryKey: ["viewer", "account", session?.user.id],
     queryFn: ({ signal }) => getAccount(signal),
     enabled: enabled && Boolean(session?.user),
+    refetchInterval: (query) => {
+      const premium = query.state.data?.premium
+      if (!premium?.active || !premium.expiresAt) return false
+      const remaining = Date.parse(premium.expiresAt) - Date.now()
+      return remaining > 0 ? Math.min(remaining + 100, 2147483647) : false
+    },
   })
 }

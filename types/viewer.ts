@@ -16,6 +16,11 @@ export type AccountData = {
   image: string | null
   role: "ADMIN" | "VIEWER" | "RIGHTS_HOLDER"
   hasRightsHolderReports: boolean
+  premium: {
+    active: boolean
+    expiresAt: string | null
+    mode: "test" | "live" | null
+  }
   phone: string | null
   phoneVerifiedAt: string | null
   transactionalSmsConsent: boolean

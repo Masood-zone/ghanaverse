@@ -2,11 +2,13 @@ import { Star } from "@/components/common/icons"
 import { WatchlistButton } from "./watchlist-button"
 import Link from "@/components/common/app-link"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
+import { PremiumBadge } from "@/components/billing/premium-badge"
 
 export type CatalogueCardItem = {
   id?: string
   slug: string
   title: string
+  isPremium: boolean
   shortDescription?: string
   contentType: string
   releaseYear: number | null
@@ -46,10 +48,11 @@ export function ContentCard({
         <article className="overflow-hidden rounded-lg border bg-white transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg">
           <div className="relative aspect-[2/3] overflow-hidden bg-muted">
             <ContentArtwork src={item.posterUrl} alt={`${item.title} poster`} />
-            <div className="absolute inset-x-0 top-0 flex items-start justify-between p-2">
+            <div className="absolute top-2 left-2 flex max-w-[calc(100%-3rem)] flex-col items-start gap-2">
               <span className="rounded bg-white/95 px-2 py-1 text-[10px] font-bold text-slate-800 shadow-sm">
                 {item.classification ?? label(item.contentType)}
               </span>
+              {item.isPremium ? <PremiumBadge /> : null}
             </div>
             <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/80 to-transparent p-3 pt-12 text-white">
               <span className="text-[10px] font-bold tracking-wide uppercase">

@@ -1,6 +1,7 @@
 import { Play } from "@/components/common/icons"
 import Link from "@/components/common/app-link"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
+import { PremiumBadge } from "@/components/billing/premium-badge"
 
 export function LandscapeCard({
   title,
@@ -8,18 +9,23 @@ export function LandscapeCard({
   href,
   image,
   progress,
+  isPremium = false,
 }: {
   title: string
   subtitle?: string
   href: string
   image?: string | null
   progress?: number
+  isPremium?: boolean
 }) {
   return (
     <Link href={href} className="group block min-w-0 snap-start">
       <article className="overflow-hidden rounded-lg border bg-white">
         <div className="relative aspect-video overflow-hidden bg-muted">
           <ContentArtwork src={image} alt="" variant="landscape" />
+          {isPremium ? (
+            <PremiumBadge className="absolute top-2 left-2 z-10" />
+          ) : null}
           <div className="absolute inset-0 grid place-items-center bg-black/0 transition group-hover:bg-black/25">
             <span className="grid h-10 w-10 scale-90 place-items-center rounded-full bg-white/95 text-primary opacity-0 shadow transition group-hover:scale-100 group-hover:opacity-100">
               <Play className="ml-0.5 h-4 w-4 fill-current" />
