@@ -1,4 +1,4 @@
-import { publicContent } from "@/lib/public-content"
+import { publicContentCard } from "@/lib/public-content"
 import { apiSuccess } from "@/lib/api-response"
 import { getCataloguePage, parseCatalogueQuery } from "@/lib/catalogue"
 import { routeError } from "@/lib/route-error"
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
       parseCatalogueQuery(new URL(request.url).searchParams)
     )
     return apiSuccess({
-      items: page.items.map(publicContent),
+      items: page.items.map(publicContentCard),
       pagination: page.pagination,
     })
   } catch (error) {

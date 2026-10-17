@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { profilePickerUrl } from "@/lib/auth/callback"
 export function RestrictedContent({ callbackUrl }: { callbackUrl: string }) {
   return (

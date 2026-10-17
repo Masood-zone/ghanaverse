@@ -1,8 +1,9 @@
+import { NavigationForm } from "@/components/common/navigation-form"
 import { SelectField } from "@/components/ui/select-field"
 import { SelectItem } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Search } from "@/components/common/icons"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { ContentCard } from "@/components/catalogue/content-card"
 import { ContentType } from "@/app/generated/prisma/enums"
 import {
@@ -64,7 +65,10 @@ export async function CataloguePage({
             Explore acclaimed cinema, folklore archives, urban drama,
             documentaries, and highlife soundtracks.
           </p>
-          <form action={route} className="relative mx-auto mt-7 max-w-2xl">
+          <NavigationForm
+            action={route}
+            className="relative mx-auto mt-7 max-w-2xl"
+          >
             <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-primary" />
             <Input
               name="q"
@@ -75,7 +79,7 @@ export async function CataloguePage({
             <button className="absolute top-2 right-2 h-10 rounded-lg bg-primary px-5 text-sm font-bold text-white">
               Search
             </button>
-          </form>
+          </NavigationForm>
         </div>
       </section>
       <section className="border-b bg-white">
@@ -97,7 +101,7 @@ export async function CataloguePage({
         </div>
       </section>
       <section className="gv-container py-8">
-        <form
+        <NavigationForm
           action={route}
           className="grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-5"
         >
@@ -139,7 +143,7 @@ export async function CataloguePage({
           <button className="rounded-md bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
             Apply filters
           </button>
-        </form>
+        </NavigationForm>
         <div className="mt-7 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold tracking-[.16em] text-primary uppercase">

@@ -1,7 +1,7 @@
 "use client"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { useState } from "react"
 import { useAdminContent } from "@/services/admin/content"
 import { ContentScope } from "./content-scope"

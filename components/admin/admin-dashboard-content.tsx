@@ -1,6 +1,6 @@
 "use client"
 import { useAdminDashboard } from "@/services/admin/dashboard"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { Heading, Metric, QueryState, Empty, Status } from "./shared"
 export function AdminDashboardContent() {
   const query = useAdminDashboard()

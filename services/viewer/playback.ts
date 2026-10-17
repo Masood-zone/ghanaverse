@@ -11,7 +11,7 @@ export function useSaveProgress() {
   return useMutation({
     mutationFn: saveProgress,
     onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["viewer", "library"] }),
+      client.invalidateQueries({ queryKey: ["viewer", "library"], refetchType: "none" }),
   })
 }
 // Browser page-unload delivery needs fetch's keepalive transport.

@@ -94,7 +94,9 @@ export function usePlaybackTracking(assetId: string, profileId?: string) {
               coverage: snapshot.coverage,
             },
           })
-          void client.invalidateQueries({ queryKey: ["viewer", "library"] })
+          // Mark stale without refetching the whole library every 15 seconds.
+          // The library refreshes when mounted after leaving the player.
+          void client.invalidateQueries({ queryKey: ["viewer", "library"], refetchType: "none" })
         },
         (snapshot) =>
           JSON.stringify([

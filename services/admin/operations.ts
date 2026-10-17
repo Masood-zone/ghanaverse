@@ -1,5 +1,6 @@
 import "server-only"
 import { getPrisma } from "@/lib/prisma"
+import { invalidateCatalogue } from "@/lib/catalogue-cache"
 import { PlatformError } from "@/lib/route-error"
 import { mutateUser } from "./user-operations"
 import { mutateCreator } from "./creator-operations"
@@ -15,7 +16,7 @@ export async function mutateAdmin(
   actorId: string
 ) {
   const [kind, id, child] = url.pathname.split("/").filter(Boolean).slice(2)
-  return getPrisma().$transaction(
+  const result = await getPrisma().$transaction(
     async (tx) => {
       // Serializes last-admin, publication and dependent record changes in this operational release.
       await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(714915)`
@@ -57,4 +58,6 @@ export async function mutateAdmin(
     },
     { maxWait: 15000, timeout: 20000 }
   )
+  if (kind !== "users") await invalidateCatalogue(kind)
+  return result
 }

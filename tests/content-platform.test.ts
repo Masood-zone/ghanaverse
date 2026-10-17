@@ -4,7 +4,11 @@ vi.mock("@/lib/viewer-context", () => ({
   getViewerContext: async () => ({ access: null, profile: null }),
 }))
 import { PublicationStatus, ContentType } from "@/app/generated/prisma/enums"
-import { catalogueQuerySchema, getCataloguePage } from "@/lib/catalogue"
+import {
+  catalogueQuerySchema,
+  getCataloguePage,
+  getPublishedContentBySlug,
+} from "@/lib/catalogue"
 import { getPrisma } from "@/lib/prisma"
 import { isPermittedPlaybackAsset, safeArtworkUrl } from "@/lib/image-policy"
 import { rankRecommendations } from "@/lib/recommendations"
@@ -88,9 +92,11 @@ describe("Phase 4 catalogue", () => {
     ids.push(content.id)
     const result = await getCataloguePage({ q: "Series Test", pageSize: 48 })
     expect(
-      result.items
-        .find((item) => item.id === content.id)
-        ?.seasons[0]?.episodes.map((episode) => episode.episodeNumber)
+      result.items.find((item) => item.id === content.id)
+    ).not.toHaveProperty("seasons")
+    const detail = await getPublishedContentBySlug(content.slug)
+    expect(
+      detail?.seasons[0]?.episodes.map((episode) => episode.episodeNumber)
     ).toEqual([1, 2])
   })
 

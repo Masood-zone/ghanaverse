@@ -8,6 +8,7 @@ import {
   publicationSchema,
 } from "@/lib/platform-validation"
 import { getPrisma } from "@/lib/prisma"
+import { invalidateCatalogue } from "@/lib/catalogue-cache"
 import { apiSuccess } from "@/lib/api-response"
 import { PlatformError, routeError } from "@/lib/route-error"
 import { requireUser } from "@/lib/auth/access"
@@ -115,7 +116,7 @@ export async function mutateCreatorContent(
         : ["episodes", "video-assets"].includes(kind) && !child
   if (!allowed)
     throw new PlatformError(404, "NOT_FOUND", "Unknown workspace operation.")
-  return getPrisma().$transaction(
+  const result = await getPrisma().$transaction(
     async (tx) => {
       await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(714915)`
       await contentActor(tx, actorId)
@@ -191,6 +192,8 @@ export async function mutateCreatorContent(
     },
     { maxWait: 15000, timeout: 20000 }
   )
+  await invalidateCatalogue()
+  return result
 }
 export async function handleCreatorContent(request: Request) {
   try {

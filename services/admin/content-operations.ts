@@ -20,6 +20,7 @@ import { editorInclude } from "./read-models"
 import { resolvePlaybackSource } from "@/lib/playback-source"
 import { prepareMediaDeletion } from "@/services/video/storage"
 import { assertPremiumPublication } from "@/services/billing/access"
+import { enqueueRightsHolderNotification } from "@/services/notifications/outbox"
 async function rejectPaidYouTube(tx: Prisma.TransactionClient, id: string) {
   const assets = await tx.videoAsset.findMany({
     where: {
@@ -176,6 +177,17 @@ export async function mutateContent({ tx, id, child, method, raw }: Context) {
             : content.publishedAt,
       },
     })
+    if (content.rightsHolderId && content.publicationStatus !== status)
+      await enqueueRightsHolderNotification(
+        tx,
+        content.rightsHolderId,
+        `publication:${content.id}:${status}:${content.updatedAt.toISOString()}`,
+        {
+          type: "PUBLICATION_CHANGED",
+          title: content.title,
+          status: status === "PUBLISHED" ? "PUBLISHED" : "UNPUBLISHED",
+        }
+      )
   }
   return result
 }

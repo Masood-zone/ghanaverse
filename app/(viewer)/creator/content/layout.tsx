@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { getOptionalUser } from "@/lib/auth/access"
 import { canManageContent } from "@/lib/auth/policy"
 export const metadata = { robots: { index: false, follow: false } }

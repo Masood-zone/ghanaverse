@@ -16,6 +16,9 @@ export type AccountData = {
   image: string | null
   role: "ADMIN" | "VIEWER" | "RIGHTS_HOLDER"
   hasRightsHolderReports: boolean
+  phone: string | null
+  phoneVerifiedAt: string | null
+  transactionalSmsConsent: boolean
   profiles: ViewerProfile[]
   activeId?: string
 }

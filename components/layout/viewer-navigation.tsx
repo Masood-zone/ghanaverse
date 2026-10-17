@@ -2,7 +2,7 @@
 import { Input } from "@/components/ui/input"
 
 import { Menu, Search } from "@/components/common/icons"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { usePathname } from "next/navigation"
 import { useSignOut } from "@/components/auth/use-sign-out"
 import { authClient } from "@/lib/auth-client"

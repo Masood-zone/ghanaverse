@@ -6,8 +6,8 @@ import {
   useState,
   useSyncExternalStore,
 } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { useNavigationRouter as useRouter } from "@/components/providers/navigation-loading"
+import Link from "@/components/common/app-link"
 import { VideoPlayer, type VideoPlayerProps } from "./video-player"
 import { EpisodeBrowser } from "./episode-browser"
 import { episodeLabel, type EpisodeSummary } from "@/lib/series"

@@ -6,7 +6,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { ArrowLeft, ArrowRight, Pause, Play, Info } from "lucide-react"
 import { ContentArtwork } from "./content-artwork"
 import { TrailerDialog } from "./trailer-dialog"
@@ -67,7 +67,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
       return
     const timer = window.setInterval(
       () => setIndex((value) => (value + 1) % count),
-      3000
+      7000
     )
     return () => window.clearInterval(timer)
   }, [count, paused, hover, focused, dialogOpen, environmentPaused])
@@ -119,7 +119,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
           move(event.changedTouches[0].clientX < start ? 1 : -1)
       }}
     >
-      <div className="absolute inset-0">
+      <div className="relative aspect-[16/10] w-full md:absolute md:inset-0 md:aspect-auto">
         <ContentArtwork
           key={item.id}
           src={item.backdropUrl}
@@ -130,10 +130,10 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
           className="gv-hero-backdrop-enter"
         />
       </div>
-      <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/65 to-black/20" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+      <div className="pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-black/95 via-black/65 to-black/20 md:block" />
+      <div className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-black/90 via-transparent to-transparent md:block" />
       <div
-        className="gv-container gv-hero-content-enter relative flex min-h-[480px] items-center py-12 md:min-h-[540px] md:py-16"
+        className="gv-container gv-hero-content-enter relative flex items-center bg-slate-950 py-7 md:min-h-[540px] md:bg-transparent md:py-16"
         role="group"
         aria-roledescription="slide"
         aria-label={`${activeIndex + 1} of ${count}`}
@@ -154,18 +154,18 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
               .filter(Boolean)
               .join(" · ")}
           </p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight md:text-6xl">
+          <h1 className="mt-3 text-[30px] leading-[1.15] font-black tracking-tight text-balance md:text-6xl">
             {item.title}
           </h1>
-          <p className="mt-5 line-clamp-3 max-w-xl text-base leading-7 text-white/80 md:text-lg">
+          <p className="mt-4 line-clamp-3 max-w-xl text-sm leading-6 text-white/80 md:mt-5 md:text-lg md:leading-7">
             {item.shortDescription}
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap md:mt-7">
             <Link
               href={
                 item.assetId ? `/watch/${item.assetId}` : `/title/${item.slug}`
               }
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-bold text-white"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-bold text-white"
             >
               {item.assetId ? (
                 <Play className="h-4 w-4" />
@@ -192,7 +192,13 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
               className="text-xs text-white/70"
               aria-live={paused ? "polite" : "off"}
             >
-              {activeIndex + 1} / {count} · {item.title}
+              <span className="md:hidden">
+                {activeIndex + 1} / {count}
+                <span className="sr-only"> · {item.title}</span>
+              </span>
+              <span className="hidden md:inline">
+                {activeIndex + 1} / {count} · {item.title}
+              </span>
             </p>
             <div className="flex gap-2">
               <button
@@ -225,7 +231,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedSlide[] }) {
               </button>
             </div>
           </div>
-          <div className="gv-scroll flex snap-x gap-3 overflow-x-auto pb-2">
+          <div className="gv-scroll hidden snap-x gap-3 overflow-x-auto pb-2 md:flex">
             {items.map((slide, position) => (
               <button
                 key={slide.id}

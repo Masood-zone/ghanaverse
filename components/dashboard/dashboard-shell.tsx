@@ -1,6 +1,6 @@
 "use client"
 import { useState, type ReactNode } from "react"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { usePathname } from "next/navigation"
 import { Brand } from "@/components/layout/brand"
 import { SignOutButton } from "@/components/auth/sign-out-button"
@@ -16,6 +16,7 @@ const navigation = [
   ["Activity", "/admin/activity", "history"],
   ["Analytics", "/admin/analytics", "analytics"],
   ["Licensing & Payouts", "/admin/royalties", "payments"],
+  ["Notifications", "/admin/notifications", "notifications"],
 ] as const
 export function DashboardShell({
   children,

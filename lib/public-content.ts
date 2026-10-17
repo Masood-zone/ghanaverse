@@ -1,4 +1,25 @@
 import type { getPublishedContentBySlug } from "@/lib/catalogue"
+import type { CatalogueCard } from "@/lib/catalogue"
+
+export function publicContentCard(content: CatalogueCard) {
+  return {
+    id: content.id,
+    slug: content.slug,
+    title: content.title,
+    shortDescription: content.shortDescription,
+    contentType: content.contentType,
+    releaseYear: content.releaseYear,
+    classification: content.classification,
+    runtimeMinutes: content.runtimeMinutes,
+    posterUrl: content.posterUrl,
+    sourceRating: content.sourceRating,
+    isFeatured: content.isFeatured,
+    isPremium: content.isPremium,
+    publishedAt: content.publishedAt,
+    genres: content.genres.map(({ genre }) => genre),
+    languages: content.languages.map(({ language }) => language),
+  }
+}
 type Record = NonNullable<Awaited<ReturnType<typeof getPublishedContentBySlug>>>
 export function publicContent(content: Record) {
   return {

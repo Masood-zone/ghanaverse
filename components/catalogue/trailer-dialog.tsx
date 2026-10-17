@@ -35,7 +35,7 @@ export function TrailerDialog({
       <dialog
         ref={dialog}
         aria-label={`${title} trailer`}
-        className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-5xl overflow-hidden rounded-xl bg-black p-0 text-white shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
+        className="gv-dialog-enter fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-5xl overflow-hidden rounded-xl bg-black p-0 text-white shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
         onClose={() => {
           setOpen(false)
           onOpenChange?.(false)

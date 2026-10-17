@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { notFound } from "next/navigation"
 import { requireAdminPage } from "@/lib/auth/access"
 import { callbackWithSearch, type PageSearchParams } from "@/lib/auth/callback"

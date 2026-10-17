@@ -1,5 +1,5 @@
 import { ArrowRight } from "@/components/common/icons"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import {
   ContentCard,
   type CatalogueCardItem,

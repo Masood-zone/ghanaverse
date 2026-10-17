@@ -2,7 +2,7 @@
 import { useViewerLibrary } from "@/services/viewer/library"
 import { QueryState } from "@/components/common/query-state"
 import { Clock3, History, Library } from "@/components/common/icons"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import type { ReactNode } from "react"
 import { ContentCard } from "@/components/catalogue/content-card"
 import { LandscapeCard } from "@/components/catalogue/landscape-card"
@@ -19,6 +19,7 @@ export function LibraryContent({
   if (!query.data)
     return (
       <QueryState
+        kind="library"
         pending={query.isPending}
         error={query.error}
         retry={query.refetch}

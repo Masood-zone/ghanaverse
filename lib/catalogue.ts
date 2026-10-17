@@ -1,29 +1,25 @@
 import "server-only"
 
 import { z } from "zod"
+import { unstable_cache } from "next/cache"
+import { CATALOGUE_TAG, CATALOGUE_REFERENCE_TAG } from "@/lib/catalogue-cache"
 import { ContentType, PublicationStatus } from "@/app/generated/prisma/enums"
 import { getViewerContext } from "@/lib/viewer-context"
 import { viewerContentWhere } from "@/lib/viewer-policy"
 import { getPrisma } from "@/lib/prisma"
 
-export const catalogueInclude = {
-  genres: { include: { genre: true } },
-  languages: { include: { language: true } },
-  trailer: true,
-  productionCompany: true,
-  rightsHolder: true,
-  credits: { include: { person: true } },
-  seasons: {
-    orderBy: { seasonNumber: "asc" as const },
-    include: {
-      episodes: {
-        orderBy: { episodeNumber: "asc" as const },
-        include: { videoAssets: { include: { storedObject: { select: { state: true } } } } },
-      },
-    },
-  },
-  videoAssets: { include: { storedObject: { select: { state: true } } } },
-} as const
+import {
+  catalogueInclude,
+  catalogueCardSelect,
+  restoreCatalogueDates,
+} from "./catalogue-projections"
+export {
+  catalogueInclude,
+  catalogueCardSelect,
+  catalogueHeroSelect,
+  restoreCatalogueDates,
+} from "./catalogue-projections"
+export type { CatalogueCard, CatalogueHero } from "./catalogue-projections"
 
 export const catalogueQuerySchema = z.object({
   q: z.string().trim().max(120).optional().default(""),
@@ -118,31 +114,44 @@ function catalogueOrder(sort: CatalogueQuery["sort"]) {
   ]
 }
 
+export const readCataloguePage = unstable_cache(
+  async (query: CatalogueQuery, isKids: boolean) => {
+    const where = {
+      ...catalogueWhere(query),
+      ...viewerContentWhere({ isKids }),
+    }
+    const prisma = getPrisma()
+    const [items, total] = await Promise.all([
+      prisma.content.findMany({
+        where,
+        select: catalogueCardSelect,
+        orderBy: catalogueOrder(query.sort),
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      prisma.content.count({ where }),
+    ])
+    return {
+      items,
+      pagination: {
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
+      },
+      query,
+    }
+  },
+  ["catalogue-cards-v1"],
+  { revalidate: 60, tags: [CATALOGUE_TAG] }
+)
+
 export async function getCataloguePage(queryInput?: Partial<CatalogueQuery>) {
   const query = catalogueQuerySchema.parse(queryInput ?? {})
+  // Session, suspension and active profile are resolved outside the shared cache.
   const { profile } = await getViewerContext()
-  const where = { ...catalogueWhere(query), ...viewerContentWhere(profile) }
-  const prisma = getPrisma()
-  const [items, total] = await Promise.all([
-    prisma.content.findMany({
-      where,
-      include: catalogueInclude,
-      orderBy: catalogueOrder(query.sort),
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
-    }),
-    prisma.content.count({ where }),
-  ])
-  return {
-    items,
-    pagination: {
-      page: query.page,
-      pageSize: query.pageSize,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
-    },
-    query,
-  }
+  const page = await readCataloguePage(query, profile?.isKids ?? false)
+  return { ...page, items: page.items.map(restoreCatalogueDates) }
 }
 
 export async function getPublishedContent(options?: Partial<CatalogueQuery>) {
@@ -156,12 +165,16 @@ export async function getPublishedContentBySlug(slug: string) {
   })
 }
 
-export async function getCatalogueFacets() {
-  const prisma = getPrisma()
-  const [genres, languages, classifications] = await Promise.all([
-    prisma.genre.findMany({ orderBy: { name: "asc" } }),
-    prisma.language.findMany({ orderBy: { name: "asc" } }),
-    prisma.classification.findMany({ orderBy: { name: "asc" } }),
-  ])
-  return { genres, languages, classifications }
-}
+export const getCatalogueFacets = unstable_cache(
+  async () => {
+    const prisma = getPrisma()
+    const [genres, languages, classifications] = await Promise.all([
+      prisma.genre.findMany({ orderBy: { name: "asc" } }),
+      prisma.language.findMany({ orderBy: { name: "asc" } }),
+      prisma.classification.findMany({ orderBy: { name: "asc" } }),
+    ])
+    return { genres, languages, classifications }
+  },
+  ["catalogue-reference-v1"],
+  { revalidate: 3600, tags: [CATALOGUE_REFERENCE_TAG] }
+)

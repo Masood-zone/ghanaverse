@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import Image from "next/image"
 
 export function Brand({ admin = false }: { admin?: boolean }) {

@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 
 const steps = ["Choose your pass", "Payment details", "Welcome to Premium"]
 export function CheckoutSteps({ current }: { current: 1 | 2 | 3 }) {

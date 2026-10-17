@@ -1,5 +1,5 @@
 "use client"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { MaterialSymbol } from "@/components/common/MaterialSymbol"
 import { billingDate, money } from "@/lib/billing-format"
 import { usePaymentVerification } from "@/services/billing/client"

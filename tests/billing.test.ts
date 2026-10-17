@@ -478,6 +478,15 @@ describe("verified premium billing", () => {
       30 * 86400000
     )
     expect(await db.premiumGrant.count({ where: { paymentId: p.id } })).toBe(1)
+    expect(
+      await db.notificationOutbox.count({
+        where: {
+          eventKey: `payment:${p.id}:confirmed`,
+          recipientId: viewer,
+          channel: "EMAIL",
+        },
+      })
+    ).toBe(1)
     const p2 = await order()
     provider.mockImplementation(() => response(verified(p2.reference)))
     const renewal = await reconcilePayment(p2.reference, viewer)
@@ -563,6 +572,11 @@ describe("verified premium billing", () => {
     processed = true
     await webhook("refund.processed", { id: "refund-one", domain: "test" })
     await webhook("refund.processed", { id: "refund-one", domain: "test" })
+    expect(
+      await db.notificationOutbox.count({
+        where: { eventKey: "refund:test:refund-one", recipientId: viewer },
+      })
+    ).toBe(1)
     expect(
       (await db.billingPayment.findUniqueOrThrow({ where: { id: p.id } }))
         .refundAmount
@@ -780,6 +794,24 @@ describe("fixed licensing payout safety", () => {
     expect((await reconcilePayout(p.id)).status).toBe("REVERSED")
     status = "success"
     expect((await reconcilePayout(p.id)).status).toBe("REVERSED")
+    expect(
+      await db.notificationOutbox.count({
+        where: { eventKey: `payout:${p.id}:SUCCESS`, recipientId: owner },
+      })
+    ).toBe(1)
+    expect(
+      await db.notificationOutbox.count({
+        where: { eventKey: `payout:${p.id}:REVERSED`, recipientId: owner },
+      })
+    ).toBe(1)
+    expect(
+      await db.notificationOutbox.count({
+        where: {
+          eventKey: `payout-alert:${p.id}:REVERSED`,
+          recipientId: admin,
+        },
+      })
+    ).toBe(1)
   })
   it("retains a provider rejection for reconciliation without authorizing a second payment", async () => {
     const l = await agreement(),

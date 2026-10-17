@@ -3,15 +3,52 @@ import { betterAuth } from "better-auth"
 import { UserRole } from "@/app/generated/prisma/enums"
 import { getPrisma } from "@/lib/prisma"
 import { DEFAULT_REGISTRATION_ROLE } from "@/lib/auth/policy"
+import { enqueueUserNotification } from "@/services/notifications/outbox"
+import { sendRecoveryEmail } from "@/services/notifications/providers"
 
 function createAuth(secret: string, baseURL: string) {
   return betterAuth({
     baseURL,
     secret,
     database: prismaAdapter(getPrisma(), { provider: "postgresql" }),
-    emailAndPassword: { enabled: true },
+    emailAndPassword: {
+      enabled: true,
+      resetPasswordTokenExpiresIn: 3600,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        await sendRecoveryEmail(user.email, url)
+      },
+      onPasswordReset: async ({ user }) => {
+        // Revoke first even if recording the confirmation encounters a failure.
+        await getPrisma().session.deleteMany({ where: { userId: user.id } })
+        const account = await getPrisma().account.findFirstOrThrow({
+          where: { userId: user.id, providerId: "credential" },
+          select: { id: true, updatedAt: true },
+        })
+        await getPrisma().$transaction((tx) =>
+          enqueueUserNotification(tx, {
+            eventKey: `password-reset:${account.id}:${account.updatedAt.toISOString()}`,
+            userId: user.id,
+            event: { type: "PASSWORD_CHANGED" },
+          })
+        )
+      },
+    },
     session: { cookieCache: { enabled: false } },
     databaseHooks: {
+      user: {
+        create: {
+          after: async (user) => {
+            await getPrisma().$transaction((tx) =>
+              enqueueUserNotification(tx, {
+                eventKey: `welcome:${user.id}`,
+                userId: user.id,
+                event: { type: "WELCOME" },
+              })
+            )
+          },
+        },
+      },
       session: {
         create: {
           before: async (session) => {
@@ -24,6 +61,18 @@ function createAuth(secret: string, baseURL: string) {
         },
       },
       account: {
+        update: {
+          after: async (account, context) => {
+            if (context?.path === "/change-password")
+              await getPrisma().$transaction((tx) =>
+                enqueueUserNotification(tx, {
+                  eventKey: `password-change:${account.id}:${account.updatedAt.toISOString()}`,
+                  userId: account.userId,
+                  event: { type: "PASSWORD_CHANGED" },
+                })
+              )
+          },
+        },
         create: {
           before: async (account) => {
             const prisma = getPrisma()

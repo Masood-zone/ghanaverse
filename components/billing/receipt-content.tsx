@@ -1,5 +1,5 @@
 "use client"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { billingDate, money } from "@/lib/billing-format"

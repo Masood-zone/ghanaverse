@@ -12,6 +12,7 @@ import {
 import { PlatformError } from "@/lib/platform-error"
 import { checkoutSchema, mobileMoneyProviders } from "@/lib/validation/billing"
 import { premiumAccess } from "./access"
+import { enqueueUserNotification } from "@/services/notifications/outbox"
 
 export async function billingActor(
   userId: string,
@@ -389,6 +390,18 @@ export async function reconcilePayment(reference: string, userId?: string) {
             channel: result.channel ?? current.channel,
           },
         })
+        if (current.status !== "SUCCESS")
+          await enqueueUserNotification(tx, {
+            eventKey: `payment:${current.id}:confirmed`,
+            userId: current.userId,
+            event: {
+              type: "PAYMENT_CONFIRMED",
+              mode,
+              amountMinor: current.amount,
+              currency: current.currency,
+              reference: current.reference,
+            },
+          })
       }
     } else if (
       current.status !== "SUCCESS" &&

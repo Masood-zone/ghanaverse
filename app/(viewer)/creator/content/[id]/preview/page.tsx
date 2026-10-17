@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { requireUserPage } from "@/lib/auth/access"
 import { canManageContent } from "@/lib/auth/policy"
 import { CreatorAccessRequired } from "@/components/auth/creator-access-required"

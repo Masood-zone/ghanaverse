@@ -1,5 +1,5 @@
 import { Film, ShieldCheck } from "@/components/common/icons"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { AuthForm } from "@/components/auth/auth-form"
 import { Brand } from "@/components/layout/brand"
 import { safeCallbackUrl } from "@/lib/auth/callback"

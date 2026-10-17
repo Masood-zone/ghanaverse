@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { usePathname } from "next/navigation"
 import {
   subscribeUploads,

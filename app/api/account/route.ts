@@ -8,12 +8,21 @@ import { ownedPhoto, verifyOrigin } from "@/lib/viewer-photos"
 export async function GET() {
   try {
     const { user } = await requireUser()
+    const contact = await getPrisma().user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: {
+        phone: true,
+        phoneVerifiedAt: true,
+        transactionalSmsConsent: true,
+      },
+    })
     return apiSuccess({
       id: user.id,
       name: user.name,
       email: user.email,
       image: user.image,
       role: user.role,
+      ...contact,
       hasRightsHolderReports:
         user.role === "RIGHTS_HOLDER" &&
         Boolean(

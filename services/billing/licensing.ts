@@ -10,6 +10,10 @@ import {
   payoutSchema,
 } from "@/lib/validation/billing"
 import { audit, billingActor } from "./payments"
+import {
+  enqueueAdminAlert,
+  enqueueRightsHolderNotification,
+} from "@/services/notifications/outbox"
 
 export async function holderScope(actorId: string) {
   const user = await billingActor(actorId)
@@ -403,6 +407,39 @@ export async function reconcilePayout(id: string) {
         lastError: null,
       },
     })
+    if (
+      current.status !== status &&
+      ["SUCCESS", "FAILED", "REVERSED"].includes(status)
+    ) {
+      const license = await tx.contentLicense.findUniqueOrThrow({
+        where: { id: current.licenseId },
+        select: { rightsHolderId: true },
+      })
+      await enqueueRightsHolderNotification(
+        tx,
+        license.rightsHolderId,
+        `payout:${current.id}:${status}`,
+        {
+          type: "PAYOUT_RESULT",
+          mode: paymentMode(),
+          amountMinor: current.amount,
+          currency: current.currency,
+          reference: current.reference,
+          status:
+            status === "SUCCESS"
+              ? "PAID"
+              : status === "REVERSED"
+                ? "REVERSED"
+                : "FAILED",
+        }
+      )
+      if (status !== "SUCCESS")
+        await enqueueAdminAlert(
+          tx,
+          `payout-alert:${current.id}:${status}`,
+          `Payout ${current.reference} ${status.toLowerCase()}. Review the provider result and recipient in /admin/royalties before approving another transfer.`
+        )
+    }
     return { id, status }
   })
 }
@@ -521,14 +558,22 @@ export async function sendPayout(
     }
     return await reconcilePayout(id)
   } catch (error) {
-    await getPrisma().payoutAttempt.updateMany({
-      where: { id, status: { in: ["SENDING", "OTP_REQUIRED"] } },
-      data: {
-        status: "UNKNOWN",
-        leaseUntil: null,
-        lastError:
-          "Provider outcome needs reconciliation. Refresh status before another transfer.",
-      },
+    await getPrisma().$transaction(async (tx) => {
+      const changed = await tx.payoutAttempt.updateMany({
+        where: { id, status: { in: ["SENDING", "OTP_REQUIRED"] } },
+        data: {
+          status: "UNKNOWN",
+          leaseUntil: null,
+          lastError:
+            "Provider outcome needs reconciliation. Refresh status before another transfer.",
+        },
+      })
+      if (changed.count)
+        await enqueueAdminAlert(
+          tx,
+          `payout-alert:${id}:UNKNOWN`,
+          `Payout ${attempt.reference} has an uncertain provider outcome. Reconcile it in /admin/royalties before authorizing another transfer.`
+        )
     })
     throw error
   }

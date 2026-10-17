@@ -9,6 +9,7 @@ import { z } from "zod"
 import { authClient } from "@/lib/auth-client"
 import { authContinuationUrl } from "@/lib/auth/callback"
 import { FormError } from "@/components/admin/shared"
+import Link from "@/components/common/app-link"
 import {
   getAuthFormSchema,
   SIGN_IN_FAILURE_MESSAGE,
@@ -135,6 +136,7 @@ export function AuthForm({
               : "Create Account"}
         </button>
       </form>
+      {mode === "sign-in" ? <Link href="/auth/recovery" className="mt-5 block text-sm font-semibold text-primary">Forgot your password?</Link> : null}
       <button
         className="mt-5 text-sm font-semibold text-primary"
         onClick={() => {

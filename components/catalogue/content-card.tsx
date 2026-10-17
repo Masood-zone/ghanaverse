@@ -1,6 +1,6 @@
 import { Star } from "@/components/common/icons"
 import { WatchlistButton } from "./watchlist-button"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
 
 export type CatalogueCardItem = {

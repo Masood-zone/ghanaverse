@@ -1,5 +1,5 @@
 "use client"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import Image from "next/image"
 import { authClient } from "@/lib/auth-client"
 import { MaterialSymbol } from "@/components/common/MaterialSymbol"
@@ -50,6 +50,7 @@ export function PlansContent() {
     return (
       <div className="gv-subscription-plans">
         <QueryState
+          kind="plans"
           pending={query.isPending}
           error={query.error}
           retry={query.refetch}

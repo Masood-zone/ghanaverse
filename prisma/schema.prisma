@@ -75,6 +75,63 @@ model User {
   playbackSessions        PlaybackSession[]
   payments                BillingPayment[]
   premiumGrants           PremiumGrant[]
+  phone                   String?
+  phoneVerifiedAt         DateTime?
+  transactionalSmsConsent Boolean                  @default(false)
+  phoneVerification       PhoneVerification?
+  notifications           NotificationOutbox[]
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+}
+
+enum NotificationStatus {
+  PENDING
+  PROCESSING
+  ACCEPTED
+  DELIVERED
+  AMBIGUOUS
+  FAILED
+  CANCELLED
+}
+
+model PhoneVerification {
+  userId          String   @id
+  phone           String
+  codeHash        String
+  expiresAt       DateTime
+  attempts        Int      @default(0)
+  sentCount       Int      @default(1)
+  windowStartedAt DateTime @default(now())
+  resendAt        DateTime
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationOutbox {
+  id                String              @id @default(cuid())
+  eventKey          String
+  recipientId       String
+  recipientAddress  String
+  channel           NotificationChannel
+  event             Json
+  status            NotificationStatus  @default(PENDING)
+  attempts          Int                 @default(0)
+  nextAttemptAt     DateTime            @default(now())
+  claimedAt         DateTime?
+  claimToken        String?
+  providerMessageId String?
+  acceptedAt        DateTime?
+  deliveredAt       DateTime?
+  lastError         String?
+  reconciliationNote String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  recipient         User                @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([eventKey, recipientId, channel])
+  @@index([status, nextAttemptAt])
 }
 
 model ViewerProfile {

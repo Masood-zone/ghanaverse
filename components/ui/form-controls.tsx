@@ -29,7 +29,10 @@ export function FormDateTimePicker<T extends FieldValues>({
   ...props
 }: Binding<T> & Omit<DateTimePickerProps, "value" | "onValueChange">) {
   const errorId = useId()
-  const { field, fieldState } = useController({
+  const {
+    field: { ref, value, onChange, onBlur },
+    fieldState,
+  } = useController({
     control,
     name,
     rules: { required: required ? "Choose a date and time." : false },
@@ -38,11 +41,11 @@ export function FormDateTimePicker<T extends FieldValues>({
     <div className="space-y-1.5">
       <DateTimePicker
         {...props}
-        ref={field.ref}
+        ref={ref}
         required={required}
-        value={field.value ?? ""}
-        onValueChange={field.onChange}
-        onBlur={field.onBlur}
+        value={value ?? ""}
+        onValueChange={onChange}
+        onBlur={onBlur}
         aria-invalid={fieldState.invalid || undefined}
         aria-describedby={
           [props["aria-describedby"], fieldState.error ? errorId : undefined]

@@ -3,7 +3,7 @@ import {
   ArrowLeft,
   LockKeyhole,
 } from "@/components/common/icons"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { notFound } from "next/navigation"
 import { PersonAvatar } from "@/components/catalogue/content-artwork"
 import { SeriesPlayer } from "@/components/player/series-player"

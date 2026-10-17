@@ -3,8 +3,9 @@ import { useAccount } from "@/services/viewer/account"
 import { QueryState } from "@/components/common/query-state"
 
 import { PersonalDetailsForm } from "./personal-details-form"
+import { PhoneSettings } from "./phone-settings"
 import { PersonAvatar } from "@/components/catalogue/content-artwork"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { SignOutButton } from "@/components/auth/sign-out-button"
 import { PasswordForm } from "./password-form"
 import { useState, type ReactNode } from "react"
@@ -19,6 +20,7 @@ export function AccountContent() {
   if (!query.data)
     return (
       <QueryState
+        kind="account"
         pending={query.isPending}
         error={query.error}
         retry={query.refetch}
@@ -49,6 +51,10 @@ export function AccountContent() {
         </span>
       </div>
       <PersonalDetailsForm compact key={user.id} user={user} />
+      <PhoneSettings
+        key={`${user.id}:${user.phone}:${user.phoneVerifiedAt}:${user.transactionalSmsConsent}`}
+        user={user}
+      />
       <section className="gv-sub-card">
         <SectionHeading
           icon="credit_card"
@@ -70,6 +76,7 @@ export function AccountContent() {
         />
         {!billing.data ? (
           <QueryState
+            kind="account"
             pending={billing.isPending}
             error={billing.error}
             retry={billing.refetch}

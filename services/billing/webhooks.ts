@@ -6,6 +6,7 @@ import { paystack, paymentMode, verifyPaystackSignature } from "@/lib/paystack"
 import { PlatformError } from "@/lib/platform-error"
 import { reconcilePayment } from "./payments"
 import { reconcilePayout } from "./licensing"
+import { enqueueUserNotification } from "@/services/notifications/outbox"
 
 const identity = z
   .union([z.string().min(1), z.number().int()])
@@ -155,6 +156,18 @@ export async function processPaystackWebhook(
           await tx.premiumGrant.updateMany({
             where: { paymentId: payment.id, revokedAt: null },
             data: { revokedAt: new Date() },
+          })
+        if (refund && refunded > current.refundAmount)
+          await enqueueUserNotification(tx, {
+            eventKey: `refund:${mode}:${resourceId}`,
+            userId: current.userId,
+            event: {
+              type: "REFUND_CONFIRMED",
+              mode,
+              amountMinor: refunded - current.refundAmount,
+              currency: current.currency,
+              reference: current.reference,
+            },
           })
         await tx.paymentWebhook.create({
           data: { id, mode, event, resourceId },

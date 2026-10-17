@@ -1,5 +1,5 @@
 import { Play } from "@/components/common/icons"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
 
 export function LandscapeCard({

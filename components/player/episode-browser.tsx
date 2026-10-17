@@ -3,7 +3,7 @@ import { SelectField } from "@/components/ui/select-field"
 import { SelectItem } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
-import Link from "next/link"
+import Link from "@/components/common/app-link"
 import { ContentArtwork } from "@/components/catalogue/content-artwork"
 import { episodeLabel, type EpisodeSummary } from "@/lib/series"
 export function EpisodeBrowser({

@@ -33,7 +33,10 @@
     "video:storage:status": "node --conditions=react-server --import tsx scripts/video-storage.ts status",
     "video:storage:cleanup": "node --conditions=react-server --import tsx scripts/video-storage.ts cleanup",
     "qa:video": "tsx scripts/video-browser-qa.ts",
-    "video:worker": "node --conditions=react-server --import tsx scripts/video-worker.ts"
+    "video:worker": "node --conditions=react-server --import tsx scripts/video-worker.ts",
+    "notifications:worker": "node --conditions=react-server --import tsx scripts/notification-worker.ts",
+    "qa:experience": "tsx scripts/experience-qa.ts",
+    "qa:catalogue:benchmark": "node --conditions=react-server --import tsx scripts/catalogue-benchmark.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1152.0",
@@ -55,6 +58,7 @@
     "lucide-react": "^1.45.0",
     "mp4box": "^2.4.1",
     "next": "16.3.4",
+    "nodemailer": "^10.1.1",
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-day-picker": "^10.0.2",
@@ -71,6 +75,7 @@
     "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",

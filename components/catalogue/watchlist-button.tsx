@@ -1,7 +1,7 @@
 "use client"
 import { Bookmark, Check, LoaderCircle } from "lucide-react"
 import { useIsMutating } from "@tanstack/react-query"
-import { useRouter } from "next/navigation"
+import { useNavigationRouter as useRouter } from "@/components/providers/navigation-loading"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth-client"
 import { useWatchlist, useWatchlistMutation } from "@/services/viewer/watchlist"

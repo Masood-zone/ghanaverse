@@ -1,14 +1,20 @@
 "use client"
+import {
+  RouteSkeleton,
+  type RouteSkeletonKind,
+} from "@/components/common/route-skeleton"
 export function QueryState({
   pending,
   error,
   retry,
   label = "Loading data",
+  kind = "workspace",
 }: {
   pending: boolean
   error: Error | null
   retry: () => unknown
   label?: string
+  kind?: RouteSkeletonKind
 }) {
   if (error)
     return (
@@ -24,10 +30,8 @@ export function QueryState({
     )
   if (pending)
     return (
-      <div role="status" aria-label={label} className="grid gap-4">
-        <div className="h-24 animate-pulse rounded-xl bg-white" />
-        <div className="h-72 animate-pulse rounded-xl bg-white" />
-        <span className="sr-only">Loading…</span>
+      <div aria-label={label}>
+        <RouteSkeleton kind={kind} />
       </div>
     )
   return null
